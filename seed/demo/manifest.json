@@ -1,0 +1,536 @@
+{
+  "generatedBy": "scripts/generate-demo-assets.py",
+  "tours": {
+    "rooms": {
+      "plan": {
+        "file": "plan-apartment.png",
+        "name": "Demo Apartment Layout",
+        "width": 1166,
+        "height": 1166
+      },
+      "groups": [
+        {
+          "key": "living",
+          "name": "Living Room"
+        },
+        {
+          "key": "kitchen",
+          "name": "Kitchen"
+        },
+        {
+          "key": "bath",
+          "name": "Bathroom"
+        },
+        {
+          "key": "master",
+          "name": "Master Bedroom"
+        },
+        {
+          "key": "bed2",
+          "name": "Bedroom 2"
+        }
+      ],
+      "accessPoints": [
+        {
+          "key": "living-entrance",
+          "group": "living",
+          "name": "Entrance View",
+          "panorama": "pano-apt-living-entrance.jpg",
+          "initialYaw": 0,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": 90,
+          "marker": {
+            "x": 0.16981,
+            "y": 0.41509
+          },
+          "hotspots": [
+            {
+              "to": "living-balcony",
+              "label": "Balcony View",
+              "yaw": -46.12,
+              "pitch": -22.58,
+              "style": "ring"
+            },
+            {
+              "to": "living-dining",
+              "label": "Dining View",
+              "yaw": 3.18,
+              "pitch": -22.59,
+              "style": "ring"
+            },
+            {
+              "to": "kitchen-entrance",
+              "label": "Kitchen",
+              "yaw": -22.78,
+              "pitch": -4.22,
+              "style": "door"
+            },
+            {
+              "to": "bath-entrance",
+              "label": "Bathroom",
+              "yaw": 7.97,
+              "pitch": -4.53,
+              "style": "door"
+            },
+            {
+              "to": "master-entrance",
+              "label": "Master Bedroom",
+              "yaw": 43.03,
+              "pitch": -11.03,
+              "style": "door"
+            },
+            {
+              "to": "bed2-entrance",
+              "label": "Bedroom 2",
+              "yaw": 17.28,
+              "pitch": -4.85,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "living-balcony",
+          "group": "living",
+          "name": "Balcony View",
+          "panorama": "pano-apt-living-balcony.jpg",
+          "initialYaw": 30,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": -30,
+          "marker": {
+            "x": 0.40566,
+            "y": 0.16981
+          },
+          "hotspots": [
+            {
+              "to": "living-entrance",
+              "label": "Entrance View",
+              "yaw": -106.12,
+              "pitch": -22.58,
+              "style": "ring"
+            },
+            {
+              "to": "living-dining",
+              "label": "Dining View",
+              "yaw": -171.45,
+              "pitch": -26.5,
+              "style": "ring"
+            },
+            {
+              "to": "kitchen-entrance",
+              "label": "Kitchen",
+              "yaw": 131.31,
+              "pitch": -8.92,
+              "style": "door"
+            },
+            {
+              "to": "bath-entrance",
+              "label": "Bathroom",
+              "yaw": 172.85,
+              "pitch": -5.52,
+              "style": "door"
+            },
+            {
+              "to": "master-entrance",
+              "label": "Master Bedroom",
+              "yaw": -135.96,
+              "pitch": -5.54,
+              "style": "door"
+            },
+            {
+              "to": "bed2-entrance",
+              "label": "Bedroom 2",
+              "yaw": -176.57,
+              "pitch": -5.11,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "living-dining",
+          "group": "living",
+          "name": "Dining View",
+          "panorama": "pano-apt-living-dining.jpg",
+          "initialYaw": 90,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": 180,
+          "marker": {
+            "x": 0.50943,
+            "y": 0.43396
+          },
+          "hotspots": [
+            {
+              "to": "living-entrance",
+              "label": "Entrance View",
+              "yaw": 93.18,
+              "pitch": -22.59,
+              "style": "ring"
+            },
+            {
+              "to": "living-balcony",
+              "label": "Balcony View",
+              "yaw": 158.55,
+              "pitch": -26.5,
+              "style": "ring"
+            },
+            {
+              "to": "kitchen-entrance",
+              "label": "Kitchen",
+              "yaw": -148.67,
+              "pitch": -8.45,
+              "style": "door"
+            },
+            {
+              "to": "bath-entrance",
+              "label": "Bathroom",
+              "yaw": -70.35,
+              "pitch": -15.06,
+              "style": "door"
+            },
+            {
+              "to": "master-entrance",
+              "label": "Master Bedroom",
+              "yaw": 60.26,
+              "pitch": -9.39,
+              "style": "door"
+            },
+            {
+              "to": "bed2-entrance",
+              "label": "Bedroom 2",
+              "yaw": -36.87,
+              "pitch": -14.93,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "kitchen-entrance",
+          "group": "kitchen",
+          "name": "Entrance View",
+          "panorama": "pano-apt-kitchen-entrance.jpg",
+          "initialYaw": 90,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": 0,
+          "marker": {
+            "x": 0.73585,
+            "y": 0.21698
+          },
+          "hotspots": [
+            {
+              "to": "living-entrance",
+              "label": "Living Room",
+              "yaw": -90.0,
+              "pitch": -21.8,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "bath-entrance",
+          "group": "bath",
+          "name": "Entrance View",
+          "panorama": "pano-apt-bath-entrance.jpg",
+          "initialYaw": 0,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": 90,
+          "marker": {
+            "x": 0.72642,
+            "y": 0.4717
+          },
+          "hotspots": [
+            {
+              "to": "living-entrance",
+              "label": "Living Room",
+              "yaw": 173.66,
+              "pitch": -23.83,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "master-entrance",
+          "group": "master",
+          "name": "Entrance View",
+          "panorama": "pano-apt-master-entrance.jpg",
+          "initialYaw": 0,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": 180,
+          "marker": {
+            "x": 0.31132,
+            "y": 0.62264
+          },
+          "hotspots": [
+            {
+              "to": "master-window",
+              "label": "Window View",
+              "yaw": 13.39,
+              "pitch": -34.79,
+              "style": "ring"
+            },
+            {
+              "to": "living-entrance",
+              "label": "Living Room",
+              "yaw": 180.0,
+              "pitch": -26.57,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "master-window",
+          "group": "master",
+          "name": "Window View",
+          "panorama": "pano-apt-master-window.jpg",
+          "initialYaw": 135,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": 45,
+          "marker": {
+            "x": 0.26415,
+            "y": 0.82075
+          },
+          "hotspots": [
+            {
+              "to": "master-entrance",
+              "label": "Entrance View",
+              "yaw": -31.61,
+              "pitch": -34.79,
+              "style": "ring"
+            },
+            {
+              "to": "living-entrance",
+              "label": "Living Room",
+              "yaw": -35.22,
+              "pitch": -7.74,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "bed2-entrance",
+          "group": "bed2",
+          "name": "Entrance View",
+          "panorama": "pano-apt-bed2-entrance.jpg",
+          "initialYaw": -90,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": -90,
+          "marker": {
+            "x": 0.63208,
+            "y": 0.63208
+          },
+          "hotspots": [
+            {
+              "to": "living-entrance",
+              "label": "Living Room",
+              "yaw": 66.04,
+              "pitch": -22.1,
+              "style": "door"
+            }
+          ]
+        }
+      ]
+    },
+    "amenities": {
+      "plan": {
+        "file": "plan-site.png",
+        "name": "Demo Site Plan",
+        "width": 1160,
+        "height": 920
+      },
+      "groups": [
+        {
+          "key": "lobby",
+          "name": "Entrance Lobby"
+        },
+        {
+          "key": "pool",
+          "name": "Swimming Pool"
+        },
+        {
+          "key": "gym",
+          "name": "Gymnasium"
+        },
+        {
+          "key": "garden",
+          "name": "Landscaped Garden"
+        }
+      ],
+      "accessPoints": [
+        {
+          "key": "lobby-entrance",
+          "group": "lobby",
+          "name": "Entrance View",
+          "panorama": "pano-amen-lobby-entrance.jpg",
+          "initialYaw": 0,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": 0,
+          "marker": {
+            "x": 0.22414,
+            "y": 0.26087
+          },
+          "hotspots": [
+            {
+              "to": "pool-deck",
+              "label": "Swimming Pool",
+              "yaw": 73.3,
+              "pitch": -4.38,
+              "style": "door"
+            },
+            {
+              "to": "gym-entrance",
+              "label": "Gymnasium",
+              "yaw": 180.0,
+              "pitch": -14.93,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "pool-deck",
+          "group": "pool",
+          "name": "Pool Deck",
+          "panorama": "pano-amen-pool-deck.jpg",
+          "initialYaw": 0,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": 90,
+          "marker": {
+            "x": 0.44828,
+            "y": 0.19565
+          },
+          "hotspots": [
+            {
+              "to": "pool-cabana",
+              "label": "Cabana View",
+              "yaw": 24.04,
+              "pitch": -6.02,
+              "style": "ring"
+            },
+            {
+              "to": "lobby-entrance",
+              "label": "Entrance Lobby",
+              "yaw": 180.0,
+              "pitch": -14.93,
+              "style": "door"
+            },
+            {
+              "to": "garden-path",
+              "label": "Landscaped Garden",
+              "yaw": 47.12,
+              "pitch": -2.4,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "pool-cabana",
+          "group": "pool",
+          "name": "Cabana View",
+          "panorama": "pano-amen-pool-cabana.jpg",
+          "initialYaw": -30,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": -60,
+          "marker": {
+            "x": 0.89655,
+            "y": 0.44783
+          },
+          "hotspots": [
+            {
+              "to": "pool-deck",
+              "label": "Pool Deck",
+              "yaw": -5.96,
+              "pitch": -6.02,
+              "style": "ring"
+            },
+            {
+              "to": "lobby-entrance",
+              "label": "Entrance Lobby",
+              "yaw": -8.2,
+              "pitch": -1.47,
+              "style": "door"
+            },
+            {
+              "to": "garden-path",
+              "label": "Landscaped Garden",
+              "yaw": -40.46,
+              "pitch": -3.46,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "gym-entrance",
+          "group": "gym",
+          "name": "Entrance View",
+          "panorama": "pano-amen-gym-entrance.jpg",
+          "initialYaw": 0,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": 180,
+          "marker": {
+            "x": 0.22414,
+            "y": 0.46522
+          },
+          "hotspots": [
+            {
+              "to": "lobby-entrance",
+              "label": "Entrance Lobby",
+              "yaw": 180.0,
+              "pitch": -7.13,
+              "style": "door"
+            },
+            {
+              "to": "garden-path",
+              "label": "Landscaped Garden",
+              "yaw": -60.75,
+              "pitch": -3.99,
+              "style": "door"
+            }
+          ]
+        },
+        {
+          "key": "garden-path",
+          "group": "garden",
+          "name": "Garden Path",
+          "panorama": "pano-amen-garden-path.jpg",
+          "initialYaw": 60,
+          "initialPitch": 0,
+          "initialFov": 75,
+          "headingOffset": 30,
+          "marker": {
+            "x": 0.53448,
+            "y": 0.76087
+          },
+          "hotspots": [
+            {
+              "to": "pool-deck",
+              "label": "Swimming Pool",
+              "yaw": 3.69,
+              "pitch": -3.17,
+              "style": "door"
+            },
+            {
+              "to": "gym-entrance",
+              "label": "Gymnasium",
+              "yaw": -75.0,
+              "pitch": -4.04,
+              "style": "door"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "hero": "hero.jpg",
+  "logo": "logo.png",
+  "floorPlanPdf": "floor-plans.pdf",
+  "brochurePdf": "references/Rhythm 51 brochure.pdf"
+}

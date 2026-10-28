@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens sampled from the Rhythm 51 brochure:
+ *   plum cover #56163B, wine gradient #893B46 → #B34E5E, coral ribbon #EC6C69,
+ *   magenta ribbon #A42D66, sand #F2E9DA, gold flourishes ≈ #C7A56A.
+ * Project-specific overrides from the admin "Theme" settings are injected as CSS
+ * variables on the public pages (see components/public/ThemeStyle.tsx).
+ */
+@theme {
+  --color-plum: var(--brand-primary, #56163b);
+  --color-wine: var(--brand-primary-dark, #351020);
+  --color-ivory: var(--brand-ivory, #faf7f0);
+  --color-sand: #f2e9da;
+  --color-gold: var(--brand-accent, #c7a56a);
+  --color-gold-soft: #e3cfa3;
+  --color-rose: var(--brand-rose, #c86b79);
+  --color-coral: #ec6c69;
+  --color-magenta: #a42d66;
+  --color-charcoal: #262124;
+  --color-stone: #8a7f80;
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Jost", "Helvetica Neue", Arial, sans-serif;
+
+  --ease-lux: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--color-ivory);
+  color: var(--color-charcoal);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Brochure-style tracked uppercase labels */
+.eyebrow {
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+/* Hairline ornament divider (brochure section dividers) */
+.ornament {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--color-gold);
+}
+.ornament::before,
+.ornament::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* Native dialog used for modals */
+dialog::backdrop {
+  background: rgb(26 8 18 / 0.72);
+  backdrop-filter: blur(3px);
+}
+dialog[open] {
+  animation: dialog-in 260ms var(--ease-lux);
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 900ms var(--ease-lux) both;
+}
+
+/*
+ * Soft halo around panorama hotspots. It plays a few times when a view opens and
+ * then stops: an endless animation forces a full-screen repaint every frame
+ * (including the blurred panels), which costs a lot of CPU/battery while idle.
+ */
+@keyframes hotspot-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+.hotspot-pulse {
+  animation: hotspot-pulse 2.6s var(--ease-lux) 3 both;
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: spin-slow 1.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Thin scrollbars inside panels */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(199 165 106 / 0.5) transparent;
+}

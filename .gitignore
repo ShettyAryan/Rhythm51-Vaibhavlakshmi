@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+.data/
+.data-test/
+test-results/
+playwright-report/
+public/vendor/
+.static-shell/
+static-site/
+*.tsbuildinfo
+next-env.d.ts
+.data-restored/
+.data-damaged-*/

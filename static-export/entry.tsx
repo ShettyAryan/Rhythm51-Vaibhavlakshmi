@@ -4,7 +4,7 @@
  * same public components the Next.js app uses.
  *
  * Every page has a <base href> pointing at the site root, so all paths in the
- * snapshot are relative ("media/…", "tour/rooms/index.html") and the site works
+ * snapshot are relative ("media/…", "tour/rooms/") and the site works
  * at a domain root or in any sub-folder.
  */
 import "@fontsource/cormorant-garamond/300.css";
@@ -40,7 +40,8 @@ runtimeConfig.pdfWorkerSrc = abs("vendor/pdf.worker.min.mjs");
 const raw = document.getElementById("tour-data")?.textContent;
 const snapshot = absolutize(JSON.parse(raw ?? "null") as Snapshot);
 const page = document.body.dataset.page as "landing" | TourType;
-const home = abs("index.html");
+// Clean addresses ("/", "/tour/rooms/") — every static host serves index.html for them.
+const home = abs("./");
 const tourBase = abs("tour");
 
 function App() {
@@ -49,7 +50,7 @@ function App() {
     return (
       <>
         <ThemeStyle theme={project.theme} />
-        <Landing snapshot={snapshot} tourBase={tourBase} tourQuery="/index.html" />
+        <Landing snapshot={snapshot} tourBase={tourBase} tourQuery="/" />
       </>
     );
   }
@@ -67,7 +68,7 @@ function App() {
         basePath={tourBase}
         homeHref={home}
         otherTour={snapshot.tours[other]?.groups.length ? other : null}
-        linkQuery="/index.html"
+        linkQuery="/"
       />
     </>
   );

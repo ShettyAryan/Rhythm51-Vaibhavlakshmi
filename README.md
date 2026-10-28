@@ -57,7 +57,7 @@ npm run dev                 # http://localhost:3000  ·  admin: /admin
 | `npm run db:seed [-- --force]` | Seed the demo project (skips if a project exists unless `--force`) |
 | `npm run admin:create -- --email … [--name …] [--reset]` | Create an admin / reset a password (reads `ADMIN_PASSWORD` or prompts). There are **no default credentials**. |
 | `npm run export [-- --slug … --out …]` | Export the latest published snapshot as a static website (default `./static-site`) |
-| `npm run export:shell` | Rebuild only the static site's code bundle into `.static-shell/` |
+| `npm run export:shell` | Developer use only: rebuilds the code bundle in `.static-shell/`. It does **not** update `static-site/` — use `npm run export` or the admin button for that |
 | `npm run demo:assets` | Regenerate `seed/demo/*` (synthetic panoramas/plans + brochure-derived hero, logo, floor-plan PDF) |
 | `npm test` | Vitest unit + integration tests |
 | `npm run test:e2e` | Production build + Playwright E2E against an isolated `.data-test` database |
@@ -194,7 +194,7 @@ Keep the admin panel on your own computer and publish the tour as plain files:
 
 Visitors only ever get read-only files; there is no admin panel online.
 `_headers` (Netlify / Cloudflare Pages) sets long-term caching for media and code.
-`npm run export:shell` rebuilds just the code bundle (done automatically on export).
+Every export rebuilds the code too, so code changes (e.g. after updating this project) reach the site the same way: **export, then deploy**. Code and media file names contain a content hash, so visitors never get stale cached files after a redeploy.
 
 ### Full online deployment (online admin panel)
 

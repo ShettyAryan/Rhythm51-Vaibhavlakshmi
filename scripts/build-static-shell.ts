@@ -1,12 +1,18 @@
 /**
  * Builds the code part of the static site ("shell") into .static-shell/:
- *   assets/app.js (+ lazily loaded chunks), assets/app.css (fonts), assets/tailwind.css,
- *   vendor/pdf.worker.min.mjs, shell.json (file list).
+ *   assets/app-<hash>.js (+ lazily loaded chunks), assets/app-<hash>.css (fonts),
+ *   assets/tailwind-<hash>.css, vendor/pdf.worker.min.mjs, shell.json (file list).
+ * Every asset name contains a hash of its content, so hosts can cache them for a
+ * year and visitors still get new code as soon as a new export is deployed.
+ *
+ * NOTE: this only rebuilds the code bundle. To update the deployable folder use
+ * "Export static site" in the admin or `npm run export` (which also runs this).
  * Content (snapshot + media) is added per export by lib/export/static.ts.
  * Does not touch the database, so it can run while the admin server is up.
  *
  *   npm run export:shell
  */
+import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -35,6 +41,7 @@ async function main() {
     minify: true,
     jsx: "automatic",
     tsconfig: path.join(root, "tsconfig.json"),
+    entryNames: "[name]-[hash]",
     chunkNames: "chunk-[hash]",
     assetNames: "[name]-[hash]",
     loader: { ".woff2": "file", ".woff": "file" },
@@ -47,14 +54,19 @@ async function main() {
     metafile: true,
     logLevel: "warning",
   });
-  const outputs = Object.keys(result.metafile.outputs).map((p) => path.relative(out, path.resolve(p)).replace(/\\/g, "/"));
+  const rel = (p: string) => path.relative(out, path.resolve(p)).replace(/\\/g, "/");
+  const outputs = Object.keys(result.metafile.outputs).map(rel);
+  // Entry bundle and its CSS have content-hashed names, so look them up.
+  const [entryJs, entryMeta] = Object.entries(result.metafile.outputs).find(([, o]) => o.entryPoint)!;
+  const entry = { js: rel(entryJs), css: entryMeta.cssBundle ? rel(entryMeta.cssBundle) : null };
 
   // 2. Tailwind CSS (scans the project sources for class names)
   const cssPath = path.join(root, "app", "globals.css");
   const css = await postcss([tailwind({ base: root, optimize: { minify: true } })]).process(readFileSync(cssPath, "utf8"), {
     from: cssPath,
   });
-  writeFileSync(path.join(out, "assets", "tailwind.css"), css.css);
+  const tailwindFile = `assets/tailwind-${createHash("sha256").update(css.css).digest("hex").slice(0, 10)}.css`;
+  writeFileSync(path.join(out, tailwindFile), css.css);
 
   // 3. pdf.js worker (must match the bundled pdfjs-dist version)
   const pdfDir = path.dirname(require.resolve("pdfjs-dist/package.json"));
@@ -62,8 +74,8 @@ async function main() {
 
   const manifest = {
     builtAt: new Date().toISOString(),
-    js: "assets/app.js",
-    css: ["assets/app.css", "assets/tailwind.css"].filter((f) => f === "assets/tailwind.css" || outputs.includes(f)),
+    js: entry.js,
+    css: [entry.css, tailwindFile].filter((f): f is string => !!f),
   };
   writeFileSync(path.join(out, "shell.json"), JSON.stringify(manifest, null, 2));
   const size = outputs.length;

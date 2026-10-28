@@ -169,6 +169,10 @@ export async function exportStaticSite(projectId: string, outDir = defaultExport
     /*turbopackIgnore: true*/ path.join(outDir, "vercel.json"),
     JSON.stringify(
       {
+        // Clean URLs: serve /tour/rooms/ (no ".html") and redirect old .html links there.
+        // Trailing slashes keep each page's relative <base href> correct.
+        cleanUrls: true,
+        trailingSlash: true,
         headers: [
           { source: "/media/(.*)", headers: [{ key: "Cache-Control", value: LONG_CACHE }] },
           { source: "/assets/(.*)", headers: [{ key: "Cache-Control", value: LONG_CACHE }] },

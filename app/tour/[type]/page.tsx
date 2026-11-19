@@ -39,7 +39,7 @@ export default async function TourPage({ params, searchParams }: { params: Promi
       <ThemeStyle theme={snapshot.project.theme} />
       <TourExperience
         tour={tour}
-        project={{ name: snapshot.project.name, logo: snapshot.project.logo, navLabels: snapshot.project.navLabels }}
+        project={{ name: snapshot.project.name, logo: snapshot.project.logo, navLabels: snapshot.project.navLabels, music: snapshot.project.music, musicVolume: snapshot.project.musicVolume }}
         initialAccessPointId={typeof ap === "string" ? ap : null}
         basePath="/tour"
         homeHref="/"

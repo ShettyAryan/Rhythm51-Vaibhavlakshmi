@@ -20,7 +20,7 @@ export default async function PreviewLanding({ searchParams }: { searchParams: P
   return (
     <>
       <ThemeStyle theme={built.snapshot.project.theme} />
-      <Landing snapshot={built.snapshot} tourBase="/admin/preview/tour" tourQuery={drafts ? "?drafts=1" : ""} banner={<PreviewBanner drafts={drafts} />} />
+      <Landing snapshot={built.snapshot} tourBase="/admin/preview/tour" tourQuery={drafts ? "?drafts=1" : ""} banner={<PreviewBanner drafts={drafts} />} intro={false} />
     </>
   );
 }

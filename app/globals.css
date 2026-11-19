@@ -17,11 +17,15 @@
   --color-rose: var(--brand-rose, #c86b79);
   --color-coral: #ec6c69;
   --color-magenta: #a42d66;
+  /* Landing menu buttons: the raspberry of the "2 & 3 BHK Residences" price badge. */
+  --color-menu: var(--brand-menu, #b83456);
   --color-charcoal: #262124;
   --color-stone: #8a7f80;
 
   --font-display: "Cormorant Garamond", Georgia, serif;
   --font-sans: "Jost", "Helvetica Neue", Arial, sans-serif;
+  /* ConstructXR wordmark */
+  --font-brand: "Poppins", "Helvetica Neue", Arial, sans-serif;
 
   --ease-lux: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
@@ -113,6 +117,95 @@ dialog[open] {
 }
 .hotspot-pulse {
   animation: hotspot-pulse 2.6s var(--ease-lux) 3 both;
+}
+
+/*
+ * Intro screen (components/public/IntroScreen.tsx). Timeline:
+ *   0.0–1.3 s  emblem rises into place, revealed from the ground up
+ *   1.3–2.4 s  a band of light sweeps across the gold
+ *   1.0–2.1 s  wordmark comes into focus;  1.9–2.8 s  tagline opens from the centre
+ *   2.8–3.5 s  "Created by ConstructXR";    then the Start Experience button
+ */
+.intro-emblem {
+  animation: intro-rise 1.3s var(--ease-lux) both;
+}
+@keyframes intro-rise {
+  from {
+    clip-path: inset(100% 0 0 0);
+    transform: translateY(28px);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+.intro-shine {
+  background: linear-gradient(105deg, transparent 38%, rgb(255 248 225 / 0.85) 50%, transparent 62%) no-repeat;
+  background-size: 300% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mix-blend-mode: screen;
+  animation: intro-shine 1.1s ease-in-out 1.3s both;
+}
+@keyframes intro-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+.intro-wordmark {
+  animation: intro-focus 1.1s var(--ease-lux) 1s both;
+}
+@keyframes intro-focus {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: scale(1.08);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+.intro-tagline {
+  animation: intro-open 0.9s var(--ease-lux) 1.9s both;
+}
+@keyframes intro-open {
+  from {
+    opacity: 0;
+    clip-path: inset(0 50% 0 50%);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+.intro-credit {
+  animation: fade-up 0.8s var(--ease-lux) 2.8s both;
+}
+.intro-button {
+  animation: fade-up 0.7s var(--ease-lux) both;
+}
+.intro-leave {
+  animation: intro-leave 0.7s var(--ease-lux) both;
+  pointer-events: none;
+}
+@keyframes intro-leave {
+  to {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+}
+/* The landing page's own entrance animations wait until the intro is gone. */
+[data-intro="showing"] .animate-fade-up {
+  animation-play-state: paused;
 }
 
 @keyframes spin-slow {

@@ -21,6 +21,7 @@ import { buildSnapshot } from "@/lib/content/snapshot";
 import { openTestDatabase, setDbForTesting, type Database } from "@/lib/db";
 import { setStorageForTesting } from "@/lib/storage";
 import { createLocalStorage } from "@/lib/storage/local";
+import { silentMp3 } from "../silentMp3";
 
 let db: Database;
 let dir: string;
@@ -106,8 +107,100 @@ describe("published snapshot", () => {
     // Published URLs are served from the frozen publication.
     expect(entrance.panorama!.url).toContain("p=1");
     expect(built.snapshot.tours.amenities).toBeNull();
-    expect(built.snapshot.documents.brochure?.downloadUrl).toBeNull();
+    expect(built.snapshot.documents.brochure?.files.map((f) => f.downloadUrl)).toEqual([null]);
     expect(built.snapshot.documents.floorPlan).toBeNull();
+  });
+
+  it("documents hold several PDFs and images in order", async () => {
+    const pdf2 = (await importFile(ids.project!, { fileName: "3bhk.pdf", mimeType: "application/pdf", data: Buffer.from("%PDF-1.4\n%b\n"), category: "pdf" })).id;
+    const img = (await importFile(ids.project!, { fileName: "site.png", mimeType: "image/png", data: await png(300, 200, "#ffffff"), category: "floor_plan_image" })).id;
+    await upsertDocument(ids.project!, "floor_plan", {
+      files: [
+        { assetId: ids.pdf!, title: "2 BHK" },
+        { assetId: pdf2, title: "3 BHK" },
+        { assetId: img, title: "Site plan" },
+      ],
+      status: "published",
+      allowDownload: true,
+    });
+    const doc = (await buildSnapshot(db, ids.project!, { mode: "published" }))!.snapshot.documents.floorPlan!;
+    expect(doc.files.map((f) => [f.title, f.kind])).toEqual([["2 BHK", "pdf"], ["3 BHK", "pdf"], ["Site plan", "image"]]);
+    expect(doc.files[2]!.downloadUrl).toContain("download=1");
+    // Files in use can't be deleted from the media library.
+    await expect(deleteAsset(ids.project!, img)).rejects.toThrow(/still used/);
+    await upsertDocument(ids.project!, "floor_plan", { files: [] });
+    expect((await buildSnapshot(db, ids.project!, { mode: "published" }))!.snapshot.documents.floorPlan).toBeNull();
+    await deleteAsset(ids.project!, img);
+  });
+
+  it("background music: MP3 uploads, snapshot, volume and delete protection", async () => {
+    const track = await importFile(ids.project!, { fileName: "theme.mp3", mimeType: "audio/mpeg", data: silentMp3(), category: "audio" });
+    expect([track.mime_type, track.category, track.width]).toEqual(["audio/mpeg", "audio", null]);
+    await expect(
+      importFile(ids.project!, { fileName: "fake.mp3", mimeType: "audio/mpeg", data: Buffer.from("not really audio"), category: "audio" }),
+    ).rejects.toThrow(/do not match/);
+    await expect(
+      importFile(ids.project!, { fileName: "x.png", mimeType: "image/png", data: await png(10, 10), category: "audio" }),
+    ).rejects.toThrow(/MP3/);
+    const image = (await importFile(ids.project!, { fileName: "i.png", mimeType: "image/png", data: await png(10, 10), category: "image" })).id;
+    await expect(updateProject(ids.project!, { musicAssetId: image })).rejects.toThrow(/MP3/);
+
+    await updateProject(ids.project!, { musicAssetId: track.id, musicVolume: 0.3, autoPublish: false });
+    const p = (await buildSnapshot(db, ids.project!, { mode: "published" }))!.snapshot.project;
+    expect(p.music?.id).toBe(track.id);
+    expect(p.musicVolume).toBe(0.3);
+    // Saving the volume must not drop other settings, and vice versa.
+    await updateProject(ids.project!, { autoPublish: false });
+    expect((await buildSnapshot(db, ids.project!, { mode: "published" }))!.snapshot.project.musicVolume).toBe(0.3);
+    await expect(deleteAsset(ids.project!, track.id)).rejects.toThrow();
+
+    await updateProject(ids.project!, { musicAssetId: null });
+    expect((await buildSnapshot(db, ids.project!, { mode: "published" }))!.snapshot.project.music).toBeNull();
+    await deleteAsset(ids.project!, track.id);
+    await deleteAsset(ids.project!, image);
+  });
+
+  it("covers can be GIFs or videos", async () => {
+    // GIF: kept as-is (no WebP renditions, which would drop the animation).
+    const gifData = await sharp({ create: { width: 900, height: 500, channels: 3, background: "#b83456" } }).gif().toBuffer();
+    const gif = await importFile(ids.project!, { fileName: "loop.gif", mimeType: "image/gif", data: gifData, category: "image" });
+    expect([gif.mime_type, gif.width, gif.height, Object.keys(gif.metadata.variants ?? {})]).toEqual(["image/gif", 900, 500, []]);
+    await expect(
+      importFile(ids.project!, { fileName: "p.gif", mimeType: "image/gif", data: gifData, category: "panorama" }),
+    ).rejects.toThrow(/JPEG, PNG or WebP/);
+
+    // Video: MP4 / WebM recognised by their file signatures.
+    const mp4 = Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from("ftypmp42"), Buffer.alloc(64)]);
+    const video = await importFile(ids.project!, { fileName: "cover.mp4", mimeType: "video/mp4", data: mp4, category: "video" });
+    expect([video.mime_type, video.category]).toEqual(["video/mp4", "video"]);
+    const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(64)]);
+    const video2 = await importFile(ids.project!, { fileName: "cover.webm", mimeType: "video/webm", data: webm, category: "video" });
+    await expect(
+      importFile(ids.project!, { fileName: "fake.mp4", mimeType: "video/mp4", data: Buffer.from("definitely not a video"), category: "video" }),
+    ).rejects.toThrow(/do not match/);
+
+    await updateProject(ids.project!, { heroAssetId: video.id, heroTabletAssetId: gif.id, heroMobileAssetId: video2.id });
+    const p = (await buildSnapshot(db, ids.project!, { mode: "published" }))!.snapshot.project;
+    expect([p.hero?.mimeType, p.heroTablet?.mimeType, p.heroMobile?.mimeType]).toEqual(["video/mp4", "image/gif", "video/webm"]);
+    // Audio is not a valid cover.
+    const track = await importFile(ids.project!, { fileName: "t.mp3", mimeType: "audio/mpeg", data: silentMp3(1), category: "audio" });
+    await expect(updateProject(ids.project!, { heroAssetId: track.id })).rejects.toThrow(/image, GIF or video/);
+
+    await updateProject(ids.project!, { heroAssetId: null, heroTabletAssetId: null, heroMobileAssetId: null });
+    for (const a of [gif.id, video.id, video2.id, track.id]) await deleteAsset(ids.project!, a);
+  });
+
+  it("separate tablet and mobile cover images", async () => {
+    const make = async (name: string) =>
+      (await importFile(ids.project!, { fileName: name, mimeType: "image/png", data: await png(120, 80), category: "image" })).id;
+    const [desktop, tablet, upright, mobile] = [await make("d.png"), await make("t.png"), await make("tp.png"), await make("m.png")];
+    await updateProject(ids.project!, { heroAssetId: desktop, heroTabletAssetId: tablet, heroTabletPortraitAssetId: upright, heroMobileAssetId: mobile });
+    const p = (await buildSnapshot(db, ids.project!, { mode: "published" }))!.snapshot.project;
+    expect([p.hero?.id, p.heroTablet?.id, p.heroTabletPortrait?.id, p.heroMobile?.id]).toEqual([desktop, tablet, upright, mobile]);
+    await expect(deleteAsset(ids.project!, upright)).rejects.toThrow();
+    await updateProject(ids.project!, { heroTabletAssetId: null, heroTabletPortraitAssetId: null, heroMobileAssetId: null });
+    const p2 = (await buildSnapshot(db, ids.project!, { mode: "published" }))!.snapshot.project;
+    expect([p2.heroTablet, p2.heroTabletPortrait, p2.heroMobile]).toEqual([null, null, null]);
   });
 
   it("preview with drafts includes draft rooms and viewpoints", async () => {

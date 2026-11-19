@@ -3,6 +3,7 @@ import {
   DEFAULT_NAV_LABELS,
   TOUR_TYPES,
   type AccessPointData,
+  type DocumentFile,
   type DocumentRef,
   type FloorPlanData,
   type GroupData,
@@ -51,6 +52,8 @@ export async function buildSnapshot(
     return toMediaRef(a, published);
   };
   const isImage = (a: AssetRow) => a.mime_type.startsWith("image/");
+  /** Landing cover slots take an image, an animated GIF or a video. */
+  const isCover = (a: AssetRow) => isImage(a) || a.mime_type.startsWith("video/");
   const isPdf = (a: AssetRow) => a.mime_type === "application/pdf";
 
   // ---- Floor plans -------------------------------------------------------
@@ -171,21 +174,36 @@ export async function buildSnapshot(
 
   // ---- Documents ----------------------------------------------------------
   const docRows = (await db.query<Record<string, any>>("select * from documents where project_id = $1", [projectId])).rows;
+  const docFileRows = (
+    await db.query<{ document_id: string; asset_id: string; title: string }>(
+      `select f.document_id, f.asset_id, f.title from document_files f join documents d on d.id = f.document_id
+        where d.project_id = $1 order by f.display_order, f.created_at`,
+      [projectId],
+    )
+  ).rows;
   const doc = (type: "floor_plan" | "brochure"): DocumentRef | null => {
     const d = docRows.find((r) => r.type === type);
-    if (!d || !visible(d.status) || !d.asset_id) return null;
-    const ref = media(d.asset_id, isPdf);
-    if (!ref) return null;
-    const a = assetById.get(d.asset_id)!;
-    return {
-      id: a.id,
-      title: d.title,
-      url: ref.url,
-      fileName: a.file_name,
-      fileSize: Number(a.file_size),
-      allowDownload: !!d.allow_download,
-      downloadUrl: d.allow_download ? `${ref.url}&download=1` : null,
-    };
+    if (!d || !visible(d.status)) return null;
+    const files: DocumentFile[] = [];
+    for (const f of docFileRows.filter((r) => r.document_id === d.id)) {
+      const ref = media(f.asset_id, (a) => isPdf(a) || isImage(a));
+      if (!ref) continue;
+      const a = assetById.get(f.asset_id)!;
+      files.push({
+        id: a.id,
+        title: f.title,
+        kind: isPdf(a) ? "pdf" : "image",
+        url: ref.url,
+        fileName: a.file_name,
+        fileSize: Number(a.file_size),
+        width: ref.width,
+        height: ref.height,
+        variants: ref.variants,
+        downloadUrl: d.allow_download ? `${ref.url}&download=1` : null,
+      });
+    }
+    if (!files.length) return null;
+    return { id: d.id, title: d.title, allowDownload: !!d.allow_download, files };
   };
 
   // ---- Project ------------------------------------------------------------
@@ -195,7 +213,12 @@ export async function buildSnapshot(
     name: project.name,
     developerName: project.developer_name,
     logo: media(project.logo_asset_id, isImage),
-    hero: media(project.hero_asset_id, isImage),
+    hero: media(project.hero_asset_id, isCover),
+    heroTablet: media(project.hero_tablet_asset_id, isCover),
+    heroTabletPortrait: media(project.hero_tablet_portrait_asset_id, isCover),
+    heroMobile: media(project.hero_mobile_asset_id, isCover),
+    music: media(project.music_asset_id, (a) => a.mime_type.startsWith("audio/")),
+    musicVolume: Number(project.settings?.musicVolume ?? 0.5),
     heroHeadline: project.hero_headline,
     heroSubtitle: project.hero_subtitle,
     showHeroText: !!project.show_hero_text,
@@ -239,7 +262,7 @@ export function toMediaRef(a: AssetRow, published: boolean): MediaRef {
     const v = meta.variants?.[name];
     if (v) variants[name] = { url: mediaUrl(a, published, name), width: v.width, height: v.height };
   }
-  return { id: a.id, url: mediaUrl(a, published), width: a.width, height: a.height, variants };
+  return { id: a.id, url: mediaUrl(a, published), width: a.width, height: a.height, variants, mimeType: a.mime_type };
 }
 
 /** Storage keys a publication needs, so /api/media can serve frozen files. */

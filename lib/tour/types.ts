@@ -15,6 +15,8 @@ export interface MediaRef {
   url: string;
   width: number | null;
   height: number | null;
+  /** e.g. "image/webp", "image/gif", "video/mp4" (absent in older publications = image). */
+  mimeType?: string;
   /**
    * Renditions keyed by name, when available: thumb ≈640w, md ≈2048w, lg ≈4096w,
    * and for heavy panoramas "full" = original resolution, web-optimised (WebP).
@@ -22,15 +24,30 @@ export interface MediaRef {
   variants: Partial<Record<"thumb" | "md" | "lg" | "full", { url: string; width: number; height: number }>>;
 }
 
-export interface DocumentRef {
+/** One file inside a document (a PDF, or an image such as a floor plan drawing). */
+export interface DocumentFile {
+  /** Asset id. */
   id: string;
+  /** Tab label; falls back to the file name when empty. */
   title: string;
+  kind: "pdf" | "image";
   url: string;
   fileName: string;
   fileSize: number;
-  allowDownload: boolean;
-  /** URL that forces a download (only when allowDownload). */
+  width: number | null;
+  height: number | null;
+  /** Downscaled renditions (images only). */
+  variants: MediaRef["variants"];
+  /** URL that forces a download (only when the document allows downloads). */
   downloadUrl: string | null;
+}
+
+export interface DocumentRef {
+  id: string;
+  title: string;
+  allowDownload: boolean;
+  /** Shown as tabs in the viewer, in this order. Never empty. */
+  files: DocumentFile[];
 }
 
 export interface HotspotData {
@@ -94,7 +111,17 @@ export interface ProjectData {
   name: string;
   developerName: string;
   logo: MediaRef | null;
+  /** Desktop cover image (also the fallback when no tablet/mobile image is set). */
   hero: MediaRef | null;
+  /** Tablet held sideways (landscape). */
+  heroTablet?: MediaRef | null;
+  /** Tablet held upright (portrait). */
+  heroTabletPortrait?: MediaRef | null;
+  heroMobile?: MediaRef | null;
+  /** Background music (MP3), looped; visitors can mute it. */
+  music?: MediaRef | null;
+  /** 0–1 playback volume for the music. */
+  musicVolume?: number;
   heroHeadline: string;
   heroSubtitle: string;
   showHeroText: boolean;
@@ -118,6 +145,8 @@ export interface ThemeConfig {
   accent?: string;
   ivory?: string;
   rose?: string;
+  /** Landing page menu buttons. */
+  menu?: string;
 }
 
 export interface ContactInfo {

@@ -18,7 +18,12 @@ type Input<T extends z.ZodType> = z.infer<T>;
 // admin's active project before it is read or written.
 // ---------------------------------------------------------------------------
 
-async function assertAsset(db: Queryable, projectId: string, assetId: string | null | undefined, kind?: "image" | "pdf" | "panorama") {
+async function assertAsset(
+  db: Queryable,
+  projectId: string,
+  assetId: string | null | undefined,
+  kind?: "image" | "pdf" | "panorama" | "document" | "audio" | "cover",
+) {
   if (!assetId) return;
   const a = (
     await db.query<{ mime_type: string; category: string; status: string }>(
@@ -28,8 +33,15 @@ async function assertAsset(db: Queryable, projectId: string, assetId: string | n
   ).rows[0];
   if (!a || a.status !== "ready") throw new ApiError(400, "Selected file was not found in the media library.");
   if (kind === "pdf" && a.mime_type !== "application/pdf") throw new ApiError(400, "Select a PDF file.");
+  if (kind === "audio" && !a.mime_type.startsWith("audio/")) throw new ApiError(400, "Select an MP3 audio file.");
+  if (kind === "cover" && !a.mime_type.startsWith("image/") && !a.mime_type.startsWith("video/")) {
+    throw new ApiError(400, "A cover must be an image, GIF or video.");
+  }
   if ((kind === "image" || kind === "panorama") && !a.mime_type.startsWith("image/")) throw new ApiError(400, "Select an image file.");
   if (kind === "panorama" && a.category !== "panorama") throw new ApiError(400, "Select a file uploaded as a 360° panorama.");
+  if (kind === "document" && a.mime_type !== "application/pdf" && !a.mime_type.startsWith("image/")) {
+    throw new ApiError(400, "Documents can contain PDFs and images only.");
+  }
 }
 
 export async function getTourRow(db: Queryable, projectId: string, type: TourType) {
@@ -94,7 +106,11 @@ function updateSet(cols: Record<string, unknown>, startIndex = 2) {
 export async function updateProject(projectId: string, input: Input<typeof projectSettingsSchema>) {
   const db = await getDb();
   await assertAsset(db, projectId, input.logoAssetId, "image");
-  await assertAsset(db, projectId, input.heroAssetId, "image");
+  await assertAsset(db, projectId, input.heroAssetId, "cover");
+  await assertAsset(db, projectId, input.heroTabletAssetId, "cover");
+  await assertAsset(db, projectId, input.heroTabletPortraitAssetId, "cover");
+  await assertAsset(db, projectId, input.heroMobileAssetId, "cover");
+  await assertAsset(db, projectId, input.musicAssetId, "audio");
   const current = await queryOne<any>("select settings from projects where id = $1", [projectId]);
   const set = updateSet({
     name: input.name,
@@ -102,6 +118,10 @@ export async function updateProject(projectId: string, input: Input<typeof proje
     developer_name: input.developerName,
     logo_asset_id: input.logoAssetId,
     hero_asset_id: input.heroAssetId,
+    hero_tablet_asset_id: input.heroTabletAssetId,
+    hero_tablet_portrait_asset_id: input.heroTabletPortraitAssetId,
+    hero_mobile_asset_id: input.heroMobileAssetId,
+    music_asset_id: input.musicAssetId,
     hero_headline: input.heroHeadline,
     hero_subtitle: input.heroSubtitle,
     show_hero_text: input.showHeroText,
@@ -111,7 +131,13 @@ export async function updateProject(projectId: string, input: Input<typeof proje
     theme: input.theme ? JSON.stringify(input.theme) : undefined,
     contact: input.contact ? JSON.stringify(input.contact) : undefined,
     settings:
-      input.autoPublish !== undefined ? JSON.stringify({ ...(current?.settings ?? {}), autoPublish: input.autoPublish }) : undefined,
+      input.autoPublish !== undefined || input.musicVolume !== undefined
+        ? JSON.stringify({
+            ...(current?.settings ?? {}),
+            ...(input.autoPublish !== undefined && { autoPublish: input.autoPublish }),
+            ...(input.musicVolume !== undefined && { musicVolume: input.musicVolume }),
+          })
+        : undefined,
     status: input.status,
   });
   if (set.empty) return;
@@ -386,22 +412,32 @@ export async function deleteFloorPlan(projectId: string, planId: string) {
 
 export async function upsertDocument(projectId: string, type: "floor_plan" | "brochure", input: Input<typeof documentUpdateSchema>) {
   const db = await getDb();
-  await assertAsset(db, projectId, input.assetId, "pdf");
-  await query(
-    `insert into documents (project_id, type, title) values ($1, $2, $3) on conflict (project_id, type) do nothing`,
-    [projectId, type, type === "brochure" ? "Brochure" : "Floor Plan"],
-  );
-  const set = updateSet(
-    { asset_id: input.assetId, title: input.title, status: input.status, allow_download: input.allowDownload },
-    3,
-  );
-  if (!set.empty) {
-    await query(`update documents set ${set.sql}, updated_at = now() where project_id = $1 and type = $2`, [
-      projectId,
-      type,
-      ...set.values,
-    ]);
-  }
+  const files =
+    input.files ?? (input.assetId !== undefined ? (input.assetId ? [{ assetId: input.assetId, title: "" }] : []) : undefined);
+  for (const f of files ?? []) await assertAsset(db, projectId, f.assetId, "document");
+  await db.transaction(async (tx) => {
+    const doc = (
+      await tx.query<{ id: string }>(
+        `insert into documents (project_id, type, title) values ($1, $2, $3)
+         on conflict (project_id, type) do update set type = excluded.type returning id`,
+        [projectId, type, type === "brochure" ? "Brochure" : "Floor Plan"],
+      )
+    ).rows[0]!;
+    const set = updateSet({ title: input.title, status: input.status, allow_download: input.allowDownload });
+    if (!set.empty) await tx.query(`update documents set ${set.sql}, updated_at = now() where id = $1`, [doc.id, ...set.values]);
+    if (files) {
+      await tx.query("delete from document_files where document_id = $1", [doc.id]);
+      for (const [i, f] of files.entries()) {
+        await tx.query("insert into document_files (document_id, asset_id, title, display_order) values ($1, $2, $3, $4)", [
+          doc.id,
+          f.assetId,
+          f.title,
+          i,
+        ]);
+      }
+      await tx.query("update documents set updated_at = now() where id = $1", [doc.id]);
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -428,7 +464,8 @@ export async function draftSummary(projectId: string): Promise<DraftSummary> {
        (select count(*)::int from access_points ap join tour_groups g on g.id = ap.group_id join tours t on t.id = g.tour_id
           where t.project_id = $1 and ap.status = 'draft' and ap.panorama_asset_id is not null) as viewpoints,
        (select count(*)::int from floor_plans where project_id = $1 and status = 'draft' and image_asset_id is not null) as "floorPlans",
-       (select count(*)::int from documents where project_id = $1 and status = 'draft' and asset_id is not null) as documents,
+       (select count(*)::int from documents d where d.project_id = $1 and d.status = 'draft'
+          and exists (select 1 from document_files f where f.document_id = d.id)) as documents,
        (select count(*)::int from access_points ap join tour_groups g on g.id = ap.group_id join tours t on t.id = g.tour_id
           where t.project_id = $1 and ap.status = 'draft' and ap.panorama_asset_id is null) as "viewpointsMissingPanorama"`,
     [projectId],
@@ -470,8 +507,9 @@ export async function publishReadyDrafts(projectId: string): Promise<DraftSummar
         where project_id = $1 and status = 'draft' and image_asset_id is not null returning id`,
     );
     const documents = await n(
-      `update documents set status = 'published', updated_at = now()
-        where project_id = $1 and status = 'draft' and asset_id is not null returning id`,
+      `update documents d set status = 'published', updated_at = now()
+        where d.project_id = $1 and d.status = 'draft'
+          and exists (select 1 from document_files f where f.document_id = d.id) returning d.id`,
     );
     return { tours, rooms, viewpoints, floorPlans, documents, viewpointsMissingPanorama: 0 };
   });

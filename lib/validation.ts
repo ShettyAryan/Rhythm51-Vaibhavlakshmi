@@ -36,6 +36,11 @@ export const projectSettingsSchema = z
     slug: z.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/, "Lowercase letters, numbers and dashes only"),
     logoAssetId: nullableId,
     heroAssetId: nullableId,
+    heroTabletAssetId: nullableId,
+    heroTabletPortraitAssetId: nullableId,
+    heroMobileAssetId: nullableId,
+    musicAssetId: nullableId,
+    musicVolume: z.number().min(0.05).max(1),
     heroHeadline: text(160),
     heroSubtitle: text(300),
     showHeroText: z.boolean(),
@@ -47,7 +52,7 @@ export const projectSettingsSchema = z
       floorPlan: text(40),
       brochure: text(40),
     }),
-    theme: z.object({ primary: color, primaryDark: color, accent: color, ivory: color, rose: color }),
+    theme: z.object({ primary: color, primaryDark: color, accent: color, ivory: color, rose: color, menu: color.optional() }),
     contact: z.object({ phone: text(40), email: text(120), website: url, address: text(300) }),
     autoPublish: z.boolean(),
     status,
@@ -131,6 +136,12 @@ export const floorPlanUpdateSchema = z
 
 export const documentUpdateSchema = z
   .object({
+    /** When present, replaces the document's full file list (PDFs and images, in order). */
+    files: z
+      .array(z.object({ assetId: id, title: text(80) }))
+      .max(20)
+      .refine((f) => new Set(f.map((x) => x.assetId)).size === f.length, "Each file can only be added once."),
+    /** Shorthand for a single-file document (used by scripts and older clients). */
     assetId: nullableId,
     title: text(120),
     status,
@@ -142,12 +153,18 @@ export const IMAGE_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 export const PDF_MIME = ["application/pdf"] as const;
 export const MAX_IMAGE_BYTES = 80 * 1024 * 1024;
 export const MAX_PDF_BYTES = 200 * 1024 * 1024;
+export const AUDIO_MIME = ["audio/mpeg"] as const;
+export const MAX_AUDIO_BYTES = 30 * 1024 * 1024;
+/** Animated covers. GIFs are accepted in the general "image" category only. */
+export const GIF_MIME = "image/gif";
+export const VIDEO_MIME = ["video/mp4", "video/webm"] as const;
+export const MAX_VIDEO_BYTES = 150 * 1024 * 1024;
 
 export const uploadRequestSchema = z.object({
   fileName: requiredText(200),
-  mimeType: z.enum([...IMAGE_MIME, ...PDF_MIME]),
+  mimeType: z.enum([...IMAGE_MIME, GIF_MIME, ...PDF_MIME, ...AUDIO_MIME, ...VIDEO_MIME]),
   size: z.number().int().positive(),
-  category: z.enum(["panorama", "image", "floor_plan_image", "pdf"]),
+  category: z.enum(["panorama", "image", "floor_plan_image", "pdf", "audio", "video"]),
 });
 
 export const assetUpdateSchema = z.object({ fileName: requiredText(200) }).partial();

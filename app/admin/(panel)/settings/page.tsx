@@ -23,13 +23,18 @@ export default async function SettingsPage() {
           heroOverlay: Number(p.hero_overlay),
           aboutText: p.about_text,
           navLabels: { ...DEFAULT_NAV_LABELS, ...p.nav_labels },
-          theme: { primary: "", primaryDark: "", accent: "", ivory: "", rose: "", ...p.theme },
+          theme: { primary: "", primaryDark: "", accent: "", ivory: "", rose: "", menu: "", ...p.theme },
           contact: { phone: "", email: "", website: "", address: "", ...p.contact },
           autoPublish: !!p.settings?.autoPublish,
+          musicVolume: Number(p.settings?.musicVolume ?? 0.5),
           status: p.status,
         }}
         logo={await getAdminAsset(p.id, p.logo_asset_id)}
         hero={await getAdminAsset(p.id, p.hero_asset_id)}
+        heroTablet={await getAdminAsset(p.id, p.hero_tablet_asset_id)}
+        heroTabletPortrait={await getAdminAsset(p.id, p.hero_tablet_portrait_asset_id)}
+        heroMobile={await getAdminAsset(p.id, p.hero_mobile_asset_id)}
+        music={await getAdminAsset(p.id, p.music_asset_id)}
       />
     </>
   );

@@ -1,9 +1,11 @@
 "use client";
 
-import { ArrowLeft, Expand, LayoutList, Minimize, Minus, Plus, RotateCcw } from "lucide-react";
+import { Expand, Home, LayoutList, Minimize, Minus, Plus, RotateCcw } from "lucide-react";
+import { useFullscreen } from "@/components/ui/useFullscreen";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AccessPointData, GroupData, ProjectData, TourData, TourType } from "@/lib/tour/types";
+import { BackgroundMusic } from "@/components/public/BackgroundMusic";
 import { FloorPlanNavigator } from "./FloorPlanNavigator";
 import { PanoramaViewer, prefetchPanorama, type PanoramaViewerHandle, type ViewerScene } from "./PanoramaViewer";
 import { TourSidebar } from "./TourSidebar";
@@ -13,7 +15,7 @@ const PANEL_KEY = "tour.sidePanel";
 
 interface TourExperienceProps {
   tour: TourData;
-  project: Pick<ProjectData, "name" | "logo" | "navLabels">;
+  project: Pick<ProjectData, "name" | "logo" | "navLabels" | "music" | "musicVolume">;
   initialAccessPointId: string | null;
   /** Route prefix used for URLs, e.g. "/tour" or "/admin/preview/tour". */
   basePath: string;
@@ -47,11 +49,9 @@ export function TourExperience({ tour, project, initialAccessPointId, basePath, 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
-  const [canFullscreen, setCanFullscreen] = useState(false);
+  const { supported: canFullscreen, active: fullscreen, toggle: toggleFullscreen } = useFullscreen();
   const [announce, setAnnounce] = useState("");
   const viewer = useRef<PanoramaViewerHandle>(null);
-  const shell = useRef<HTMLDivElement>(null);
   const viewBus = useMemo(() => createViewBus(), []);
 
   const current = currentId ? index.get(currentId) : undefined;
@@ -80,13 +80,7 @@ export function TourExperience({ tour, project, initialAccessPointId, basePath, 
     const update = () => setIsMobile(mq.matches);
     update();
     mq.addEventListener("change", update);
-    setCanFullscreen(!!document.fullscreenEnabled);
-    const onFs = () => setFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", onFs);
-    return () => {
-      mq.removeEventListener("change", update);
-      document.removeEventListener("fullscreenchange", onFs);
-    };
+    return () => mq.removeEventListener("change", update);
   }, []);
 
   const navigate = useCallback(
@@ -130,15 +124,6 @@ export function TourExperience({ tour, project, initialAccessPointId, basePath, 
     };
   }, [current, index]);
 
-  const toggleFullscreen = async () => {
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await shell.current?.requestFullscreen();
-    } catch {
-      /* Browser refused (e.g. iOS); the tour already fills the viewport. */
-    }
-  };
-
   if (!current || !scene) {
     return (
       <EmptyTour homeHref={homeHref} title={label} message="This tour has no viewpoints to show yet." />
@@ -149,10 +134,10 @@ export function TourExperience({ tour, project, initialAccessPointId, basePath, 
   const siblings = current.group.accessPoints;
 
   const ctrl =
-    "grid size-10 place-items-center text-ivory transition hover:bg-ivory/12 focus-visible:bg-ivory/12 disabled:opacity-40";
+    "grid size-11 place-items-center text-ivory transition hover:bg-ivory/12 focus-visible:bg-ivory/12 disabled:opacity-40";
 
   return (
-    <div ref={shell} className="fixed inset-0 overflow-hidden bg-[#1d1418] text-ivory" data-testid="tour" data-tour-type={tour.type}>
+    <div className="fixed inset-0 overflow-hidden bg-[#1d1418] text-ivory" data-testid="tour" data-tour-type={tour.type}>
       <PanoramaViewer
         ref={viewer}
         scene={scene}
@@ -164,21 +149,16 @@ export function TourExperience({ tour, project, initialAccessPointId, basePath, 
 
       <p className="sr-only" aria-live="polite">{announce}</p>
 
+      {/* Shade behind the title and floor plan. Drawn below the side panel, so the panel itself stays bright. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-36 bg-gradient-to-b from-black/55 to-transparent" aria-hidden />
+
       {/* Top bar */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 bg-gradient-to-b from-black/55 to-transparent px-3 pb-10 pt-3 sm:px-5">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 px-3 pb-10 pt-3 sm:px-5">
         {/* Kept within the side panel's width so long names never spill over the panorama. */}
         <div
-          className={`pointer-events-auto flex min-w-0 items-center gap-3 ${collapsed ? "md:max-w-[min(32rem,45vw)]" : "md:max-w-[calc(17rem-1.5rem)] lg:max-w-[calc(19rem-2.5rem)]"}`}
+          className={`pointer-events-auto flex min-w-0 items-center gap-3 ${collapsed ? "md:max-w-[min(32rem,45vw)]" : "md:max-w-[calc(19rem-1.5rem)] lg:max-w-[calc(21rem-2.5rem)]"}`}
           data-testid="tour-title"
         >
-          <Link
-            href={homeHref}
-            className="grid size-10 shrink-0 place-items-center rounded-full border border-ivory/30 bg-black/25 text-ivory backdrop-blur transition hover:border-gold hover:text-gold"
-            aria-label="Back to home"
-            data-testid="tour-home"
-          >
-            <ArrowLeft className="size-4" />
-          </Link>
           <div className="min-w-0 flex-1 drop-shadow">
             <p className="eyebrow truncate text-gold-soft" title={project.name || label}>{project.name || label}</p>
             <h1 className="min-w-0 font-display leading-tight" data-testid="tour-location" title={`${current.group.name} · ${current.ap.name}`}>
@@ -252,38 +232,51 @@ export function TourExperience({ tour, project, initialAccessPointId, basePath, 
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="flex h-11 items-center gap-2 border border-gold/50 bg-wine/85 px-4 text-xs uppercase tracking-[0.2em] backdrop-blur md:hidden"
+            className="flex h-12 items-center gap-2 border border-gold/50 bg-menu/90 px-4 text-xs uppercase tracking-[0.2em] backdrop-blur md:hidden"
             aria-haspopup="dialog"
             aria-expanded={mobileOpen}
             data-testid="mobile-rooms-button"
           >
-            <LayoutList className="size-4" /> {heading}
+            <LayoutList className="size-5" /> {heading}
           </button>
+          <div className="flex items-center gap-2">
           <div className="flex items-center border border-ivory/20 bg-black/35 backdrop-blur" role="toolbar" aria-label="Viewer controls">
-            <button type="button" className={ctrl} onClick={() => viewer.current?.setView({ fov: viewer.current.getView().fov - 10 })} aria-label="Zoom in">
-              <Plus className="size-4" />
+            <button type="button" className={`${ctrl} max-sm:hidden`} onClick={() => viewer.current?.setView({ fov: viewer.current.getView().fov - 10 })} aria-label="Zoom in">
+              <Plus className="size-5" />
             </button>
-            <button type="button" className={ctrl} onClick={() => viewer.current?.setView({ fov: viewer.current.getView().fov + 10 })} aria-label="Zoom out">
-              <Minus className="size-4" />
+            <button type="button" className={`${ctrl} max-sm:hidden`} onClick={() => viewer.current?.setView({ fov: viewer.current.getView().fov + 10 })} aria-label="Zoom out">
+              <Minus className="size-5" />
             </button>
             <button type="button" className={ctrl} onClick={() => viewer.current?.resetView()} aria-label="Reset view" data-testid="reset-view">
-              <RotateCcw className="size-4" />
+              <RotateCcw className="size-5" />
             </button>
+            <BackgroundMusic music={project.music} volume={project.musicVolume} className={ctrl} iconClassName="size-5" />
             {canFullscreen && (
               <button type="button" className={ctrl} onClick={toggleFullscreen} aria-label={fullscreen ? "Exit full screen" : "Full screen"}>
-                {fullscreen ? <Minimize className="size-4" /> : <Expand className="size-4" />}
+                {fullscreen ? <Minimize className="size-5" /> : <Expand className="size-5" />}
               </button>
             )}
           </div>
           {otherTour && (
             <Link
               href={`${basePath}/${otherTour}${linkQuery}`}
-              className="hidden h-11 items-center border border-gold/50 bg-wine/80 px-4 text-xs uppercase tracking-[0.2em] text-ivory backdrop-blur transition hover:bg-wine md:flex"
+              className="hidden h-12 items-center border border-gold/50 bg-menu/80 px-4 text-xs uppercase tracking-[0.2em] text-ivory backdrop-blur transition hover:bg-menu md:flex"
               data-testid="switch-tour"
             >
               {otherTour === "rooms" ? project.navLabels.rooms : project.navLabels.amenities}
             </Link>
           )}
+          <Link
+            href={homeHref}
+            className="flex h-12 items-center gap-2 border border-gold/50 bg-menu/90 px-3.5 text-xs uppercase tracking-[0.2em] text-ivory backdrop-blur transition hover:bg-menu sm:px-4"
+            aria-label="Back to home"
+            title="Back to home"
+            data-testid="tour-home"
+          >
+            <Home className="size-5" />
+            <span className="hidden sm:inline">Home</span>
+          </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -46,11 +46,12 @@ export function toAdminAsset(a: AssetRow & { usage_count?: number }): AdminAsset
 export async function listAssets(projectId: string, category?: string): Promise<AdminAsset[]> {
   const rows = await query<AssetRow & { usage_count: number }>(
     `select a.*, (
-        (select count(*) from projects p where p.logo_asset_id = a.id or p.hero_asset_id = a.id) +
+        (select count(*) from projects p where p.logo_asset_id = a.id or p.hero_asset_id = a.id
+            or p.hero_tablet_asset_id = a.id or p.hero_tablet_portrait_asset_id = a.id or p.hero_mobile_asset_id = a.id or p.music_asset_id = a.id) +
         (select count(*) from tour_groups g where g.thumbnail_asset_id = a.id) +
         (select count(*) from access_points ap where ap.panorama_asset_id = a.id or ap.thumbnail_asset_id = a.id) +
         (select count(*) from floor_plans f where f.image_asset_id = a.id or f.original_pdf_asset_id = a.id) +
-        (select count(*) from documents d where d.asset_id = a.id)
+        (select count(*) from document_files df where df.asset_id = a.id)
       )::int as usage_count
        from assets a
       where a.project_id = $1 and a.status = 'ready' and ($2::text is null or a.category = $2)
@@ -222,19 +223,31 @@ export async function listFloorPlans(projectId: string): Promise<AdminFloorPlan[
   );
 }
 
+export interface AdminDocument {
+  title: string;
+  status: "draft" | "published";
+  allowDownload: boolean;
+  files: { title: string; asset: AdminAsset }[];
+}
+
 export async function listDocuments(projectId: string) {
   const rows = await query<any>("select * from documents where project_id = $1", [projectId]);
-  const out: Record<"floor_plan" | "brochure", { title: string; status: "draft" | "published"; allowDownload: boolean; asset: AdminAsset | null }> = {
-    floor_plan: { title: "Floor Plan", status: "draft", allowDownload: false, asset: null },
-    brochure: { title: "Brochure", status: "draft", allowDownload: false, asset: null },
+  const fileRows = await query<{ document_id: string; asset_id: string; title: string }>(
+    `select f.document_id, f.asset_id, f.title from document_files f join documents d on d.id = f.document_id
+      where d.project_id = $1 order by f.display_order, f.created_at`,
+    [projectId],
+  );
+  const out: Record<"floor_plan" | "brochure", AdminDocument> = {
+    floor_plan: { title: "Floor Plan", status: "draft", allowDownload: false, files: [] },
+    brochure: { title: "Brochure", status: "draft", allowDownload: false, files: [] },
   };
   for (const d of rows) {
-    out[d.type as "floor_plan" | "brochure"] = {
-      title: d.title,
-      status: d.status,
-      allowDownload: d.allow_download,
-      asset: await getAdminAsset(projectId, d.asset_id),
-    };
+    const files: AdminDocument["files"] = [];
+    for (const f of fileRows.filter((r) => r.document_id === d.id)) {
+      const asset = await getAdminAsset(projectId, f.asset_id);
+      if (asset) files.push({ title: f.title, asset });
+    }
+    out[d.type as "floor_plan" | "brochure"] = { title: d.title, status: d.status, allowDownload: d.allow_download, files };
   }
   return out;
 }
@@ -297,10 +310,14 @@ export async function contentWarnings(projectId: string): Promise<ContentWarning
       href: `/admin/access-points/${b.src_id}`,
     });
   }
-  const docs = await query<any>("select type, status, asset_id from documents where project_id = $1", [projectId]);
+  const docs = await query<{ type: string; files: number }>(
+    `select d.type, (select count(*)::int from document_files f where f.document_id = d.id) as files
+       from documents d where d.project_id = $1`,
+    [projectId],
+  );
   for (const type of ["floor_plan", "brochure"]) {
     const d = docs.find((x) => x.type === type);
-    if (!d?.asset_id) w.push({ severity: "warning", message: `No ${type === "brochure" ? "brochure" : "floor plan"} PDF is configured.`, href: "/admin/documents" });
+    if (!d?.files) w.push({ severity: "warning", message: `No ${type === "brochure" ? "brochure" : "floor plan"} file is configured.`, href: "/admin/documents" });
   }
   return w;
 }

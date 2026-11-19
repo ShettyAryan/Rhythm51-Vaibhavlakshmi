@@ -15,6 +15,8 @@ import "@fontsource/jost/300.css";
 import "@fontsource/jost/400.css";
 import "@fontsource/jost/500.css";
 import "@fontsource/jost/600.css";
+import "@fontsource/poppins/500.css";
+import "@fontsource/poppins/600.css";
 import { createRoot } from "react-dom/client";
 import { Landing } from "@/components/public/Landing";
 import { ThemeStyle } from "@/components/public/ThemeStyle";
@@ -63,7 +65,7 @@ function App() {
       <ThemeStyle theme={project.theme} />
       <TourExperience
         tour={tour}
-        project={{ name: project.name, logo: project.logo, navLabels: project.navLabels }}
+        project={{ name: project.name, logo: project.logo, navLabels: project.navLabels, music: project.music, musicVolume: project.musicVolume }}
         initialAccessPointId={new URLSearchParams(window.location.search).get("ap")}
         basePath={tourBase}
         homeHref={home}

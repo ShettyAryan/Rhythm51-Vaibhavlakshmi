@@ -38,8 +38,9 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
       range,
       // Published URLs are content-addressed by version, so they can be cached.
       cacheControl: "public, max-age=86400, stale-while-revalidate=604800",
-      fileName: entry.mime === "application/pdf" ? entry.fileName : undefined,
-      download: download && entry.mime === "application/pdf",
+      // Variants are WebP renditions, so the original file name would mislabel them.
+      fileName: isVariant ? undefined : entry.fileName,
+      download: download && !isVariant,
     });
   }
 

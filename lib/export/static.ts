@@ -11,7 +11,7 @@ const MARKER = ".tour-export";
 /** Hosting-tool folders that must survive re-exports. */
 const KEEP = new Set([".vercel", ".netlify", ".wrangler", ".git"]);
 const LONG_CACHE = "public, max-age=31536000, immutable";
-const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf" };
+const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf", "audio/mpeg": "mp3", "image/gif": "gif", "video/mp4": "mp4", "video/webm": "webm" };
 
 export function defaultExportDir() {
   return path.resolve(/*turbopackIgnore: true*/ process.cwd(), process.env.STATIC_EXPORT_DIR?.trim() || "static-site");

@@ -163,9 +163,9 @@ export function PdfViewer({ url, title, downloadUrl, fileName, onClose }: PdfVie
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#2b2327]" onKeyDown={onKeyDown}>
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-gold/25 bg-wine px-3 py-2 text-ivory sm:px-4">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-gold/25 bg-menu px-3 py-2 text-ivory sm:px-4">
         <div className="mr-auto min-w-0 pr-2">
-          <p className="eyebrow text-gold">{title}</p>
+          <p className="eyebrow text-gold-soft">{title}</p>
           {fileName && <p className="truncate text-xs text-ivory/60">{fileName}</p>}
         </div>
         <div className="flex items-center gap-1" role="group" aria-label="Page navigation">

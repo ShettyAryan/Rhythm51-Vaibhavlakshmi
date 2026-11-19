@@ -32,7 +32,7 @@ export async function api<T = unknown>(method: "GET" | "POST" | "PATCH" | "PUT" 
   return data as T;
 }
 
-export type UploadCategory = "panorama" | "image" | "floor_plan_image" | "pdf";
+export type UploadCategory = "panorama" | "image" | "floor_plan_image" | "pdf" | "audio" | "video";
 
 /** PUT a file with progress reporting (fetch has no upload progress events). */
 function putWithProgress(url: string, file: Blob, headers: Record<string, string>, onProgress?: (p: number) => void) {
@@ -58,16 +58,40 @@ function putWithProgress(url: string, file: Blob, headers: Record<string, string
 
 const ACCEPT: Record<UploadCategory, string[]> = {
   panorama: ["image/jpeg", "image/png", "image/webp"],
-  image: ["image/jpeg", "image/png", "image/webp"],
+  image: ["image/jpeg", "image/png", "image/webp", "image/gif"],
   floor_plan_image: ["image/jpeg", "image/png", "image/webp"],
   pdf: ["application/pdf"],
+  audio: ["audio/mpeg"],
+  video: ["video/mp4", "video/webm"],
 };
 export const ACCEPT_ATTR: Record<UploadCategory, string> = {
   panorama: ".jpg,.jpeg,.png,.webp",
-  image: ".jpg,.jpeg,.png,.webp",
+  image: ".jpg,.jpeg,.png,.webp,.gif",
   floor_plan_image: ".jpg,.jpeg,.png,.webp",
   pdf: ".pdf,application/pdf",
+  audio: ".mp3,audio/mpeg",
+  video: ".mp4,.webm,video/mp4,video/webm",
 };
+
+const WRONG_TYPE: Record<UploadCategory, string> = {
+  panorama: "Please choose a JPEG, PNG or WebP image.",
+  image: "Please choose a JPEG, PNG, WebP or GIF image.",
+  floor_plan_image: "Please choose a JPEG, PNG or WebP image.",
+  pdf: "Please choose a PDF file.",
+  audio: "Please choose an MP3 audio file.",
+  video: "Please choose an MP4 or WebM video (MOV and other formats don't play in every browser — export as MP4/H.264).",
+};
+
+/** Browsers report some types inconsistently (e.g. "audio/mp3", or nothing). */
+function normalizeMime(type: string, fileName: string) {
+  const name = fileName.toLowerCase();
+  if (type === "audio/mp3" || type === "audio/x-mpeg" || type === "audio/mpeg3" || (!type && name.endsWith(".mp3"))) return "audio/mpeg";
+  if (!type && name.endsWith(".pdf")) return "application/pdf";
+  if (!type && name.endsWith(".mp4")) return "video/mp4";
+  if (!type && name.endsWith(".webm")) return "video/webm";
+  if (!type && name.endsWith(".gif")) return "image/gif";
+  return type;
+}
 
 /**
  * Full upload flow: register → PUT bytes (direct to object storage when using
@@ -79,10 +103,8 @@ export async function uploadFile(
   opts: { category: UploadCategory; fileName?: string; replaceAssetId?: string; onProgress?: (p: number) => void },
 ): Promise<AdminAsset> {
   const fileName = opts.fileName ?? (file as File).name ?? "upload";
-  const mimeType = file.type || (fileName.toLowerCase().endsWith(".pdf") ? "application/pdf" : "");
-  if (!ACCEPT[opts.category].includes(mimeType)) {
-    throw new ClientApiError(400, opts.category === "pdf" ? "Please choose a PDF file." : "Please choose a JPEG, PNG or WebP image.");
-  }
+  const mimeType = normalizeMime(file.type, fileName);
+  if (!ACCEPT[opts.category].includes(mimeType)) throw new ClientApiError(400, WRONG_TYPE[opts.category]);
   if (opts.category === "panorama" && "name" in file) {
     const dims = await imageSize(file).catch(() => null);
     if (dims && !isPanoramaAspect(dims.w, dims.h)) {

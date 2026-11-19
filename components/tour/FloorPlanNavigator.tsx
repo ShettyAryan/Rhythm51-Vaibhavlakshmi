@@ -41,7 +41,7 @@ export function FloorPlanNavigator({ plan, current, accessPoints, groupName, vie
       <button
         type="button"
         onClick={() => setCollapsed(false)}
-        className="pointer-events-auto grid size-11 place-items-center rounded-full border border-gold/50 bg-wine/80 text-ivory shadow-lg backdrop-blur transition hover:bg-wine"
+        className="pointer-events-auto grid size-11 place-items-center rounded-full border border-gold/50 bg-menu/80 text-ivory shadow-lg backdrop-blur transition hover:bg-menu"
         aria-label="Show floor plan"
         aria-expanded={false}
         data-testid="floorplan-toggle"

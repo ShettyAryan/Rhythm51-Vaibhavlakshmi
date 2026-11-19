@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, ImageIcon, Orbit, RefreshCw, Trash2, Upload } from "lucide-react";
+import { FileText, Film, ImageIcon, Music, Orbit, RefreshCw, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AdminAsset } from "@/lib/content/queries";
@@ -11,9 +11,11 @@ import { Button, Field, Input, Select, useConfirm, useToast } from "./ui";
 
 export const CATEGORY_LABEL: Record<UploadCategory, string> = {
   panorama: "360° panoramas",
-  image: "Images (hero, logo, thumbnails)",
+  image: "Images & GIFs (cover, logo, thumbnails)",
   floor_plan_image: "Floor plan images",
   pdf: "PDF documents",
+  audio: "Audio (MP3)",
+  video: "Videos (MP4, WebM)",
 };
 
 interface UploadJob {
@@ -33,7 +35,7 @@ interface MediaLibraryProps {
 
 export function MediaLibrary({ categories, mode = "manage", onPick, selectedId }: MediaLibraryProps) {
   const toast = useToast();
-  const allowed = categories ?? (["panorama", "image", "floor_plan_image", "pdf"] as UploadCategory[]);
+  const allowed = categories ?? (["panorama", "image", "floor_plan_image", "pdf", "audio", "video"] as UploadCategory[]);
   const [filter, setFilter] = useState<UploadCategory | "all">(categories?.length === 1 ? categories[0]! : "all");
   const [uploadCategory, setUploadCategory] = useState<UploadCategory>(allowed[0]!);
   const [assets, setAssets] = useState<AdminAsset[] | null>(null);
@@ -199,7 +201,7 @@ export function MediaLibrary({ categories, mode = "manage", onPick, selectedId }
 }
 
 export function AssetThumb({ asset, className = "aspect-[4/3]" }: { asset: AdminAsset; className?: string }) {
-  const Icon = asset.category === "pdf" ? FileText : asset.category === "panorama" ? Orbit : ImageIcon;
+  const Icon = asset.category === "pdf" ? FileText : asset.category === "panorama" ? Orbit : asset.category === "audio" ? Music : asset.category === "video" ? Film : ImageIcon;
   return (
     <div className={`relative overflow-hidden bg-sand/60 ${className}`}>
       {asset.thumbUrl ? (
@@ -248,6 +250,13 @@ function AssetDetail({ asset, onClose, onChanged, onDeleted }: { asset: AdminAss
         <div>
           {asset.mimeType.startsWith("image/") ? (
             <img src={asset.url} alt={asset.fileName} className="max-h-[50dvh] w-full border border-charcoal/10 bg-sand/40 object-contain" />
+          ) : asset.mimeType.startsWith("video/") ? (
+            <video src={asset.url} controls muted playsInline preload="metadata" className="max-h-[50dvh] w-full border border-charcoal/10 bg-black" data-testid="asset-video" />
+          ) : asset.mimeType.startsWith("audio/") ? (
+            <div className="grid aspect-[4/3] place-items-center gap-3 border border-charcoal/10 bg-sand/40 p-4">
+              <Music className="size-12 text-plum" strokeWidth={1} />
+              <audio src={asset.url} controls preload="metadata" className="w-full" data-testid="asset-audio" />
+            </div>
           ) : (
             <div className="grid aspect-[4/3] place-items-center border border-charcoal/10 bg-sand/40">
               <a href={asset.url} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-2 text-plum underline-offset-4 hover:underline">

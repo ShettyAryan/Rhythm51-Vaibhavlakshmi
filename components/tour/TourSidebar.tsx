@@ -19,7 +19,7 @@ interface TourSidebarProps {
 }
 
 /** Width of the desktop panel — the tour header uses the same values to align with it. */
-export const SIDEBAR_WIDTH_CLASS = "w-[17rem] lg:w-[19rem]";
+export const SIDEBAR_WIDTH_CLASS = "w-[19rem] lg:w-[21rem]";
 
 export function groupThumb(g: GroupData): string | null {
   return g.thumbnail?.variants.thumb?.url ?? g.thumbnail?.url ?? g.accessPoints[0]?.thumbnail?.variants.thumb?.url ?? g.accessPoints[0]?.panorama?.variants.thumb?.url ?? null;
@@ -32,7 +32,7 @@ export function TourSidebar(props: TourSidebarProps) {
     <>
       {/* Desktop / tablet: panel that slides fully out of view when collapsed */}
       <aside
-        className={`pointer-events-auto absolute bottom-0 left-0 top-0 z-20 hidden flex-col border-r border-gold/30 bg-wine/88 text-ivory backdrop-blur-md transition-transform duration-300 ease-[var(--ease-lux)] md:flex ${SIDEBAR_WIDTH_CLASS} ${
+        className={`pointer-events-auto absolute bottom-0 left-0 top-0 z-20 hidden flex-col border-r border-gold-soft/40 bg-menu/95 text-ivory shadow-[8px_0_30px_rgba(0,0,0,0.25)] backdrop-blur-md transition-transform duration-300 ease-[var(--ease-lux)] md:flex ${SIDEBAR_WIDTH_CLASS} ${
           collapsed ? "-translate-x-full" : "translate-x-0"
         }`}
         aria-label={`${heading} navigation`}
@@ -42,11 +42,11 @@ export function TourSidebar(props: TourSidebarProps) {
         data-collapsed={collapsed}
       >
         <div className="flex items-center justify-between gap-2 border-b border-gold/25 px-5 pb-3 pt-[5.25rem]">
-          <h2 className="eyebrow text-gold">{heading}</h2>
+          <h2 className="eyebrow text-xs text-ivory">{heading}</h2>
           <button
             type="button"
             onClick={() => onCollapsedChange(true)}
-            className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-ivory/75 hover:bg-ivory/10 hover:text-ivory"
+            className="flex items-center gap-1 rounded-full px-2 py-1 text-xs uppercase tracking-[0.16em] text-ivory hover:bg-ivory/15"
             aria-label="Hide navigation panel"
             title="Hide panel to see the full view"
             data-testid="sidebar-toggle"
@@ -63,7 +63,7 @@ export function TourSidebar(props: TourSidebarProps) {
       <button
         type="button"
         onClick={() => onCollapsedChange(false)}
-        className={`pointer-events-auto absolute left-0 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-2 border border-l-0 border-gold/40 bg-wine/85 px-2 py-4 text-ivory shadow-lg backdrop-blur transition-[opacity,visibility] duration-300 hover:bg-wine md:flex ${
+        className={`pointer-events-auto absolute left-0 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-2 border border-l-0 border-gold/40 bg-menu/85 px-2 py-4 text-ivory shadow-lg backdrop-blur transition-[opacity,visibility] duration-300 hover:bg-menu md:flex ${
           collapsed ? "visible opacity-100" : "invisible opacity-0"
         }`}
         aria-label="Show navigation panel"
@@ -80,7 +80,7 @@ export function TourSidebar(props: TourSidebarProps) {
         aria-hidden
       />
       <aside
-        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[72dvh] flex-col border-t border-gold/40 bg-wine text-ivory shadow-[0_-12px_40px_rgba(0,0,0,0.4)] transition-transform duration-300 ease-[var(--ease-lux)] md:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[72dvh] flex-col border-t border-gold/40 bg-menu text-ivory shadow-[0_-12px_40px_rgba(0,0,0,0.4)] transition-transform duration-300 ease-[var(--ease-lux)] md:hidden ${
           mobileOpen ? "translate-y-0" : "translate-y-full"
         }`}
         aria-label={`${heading} navigation`}
@@ -89,7 +89,7 @@ export function TourSidebar(props: TourSidebarProps) {
         data-testid="tour-sheet"
       >
         <div className="flex items-center justify-between border-b border-gold/25 px-5 py-3">
-          <h2 className="eyebrow text-gold">{heading}</h2>
+          <h2 className="eyebrow text-xs text-ivory">{heading}</h2>
           <button type="button" onClick={() => onMobileOpenChange(false)} className="grid size-9 place-items-center rounded-full hover:bg-ivory/10" aria-label="Close list">
             <X className="size-5" />
           </button>
@@ -135,10 +135,10 @@ function GroupList({ tour, currentGroupId, currentAccessPointId, onSelect }: Tou
               aria-expanded={multi ? open : undefined}
               title={g.name}
               className={`group flex w-full min-w-0 items-center gap-3 px-3 py-2.5 text-left transition ${
-                active ? "bg-ivory/12 text-ivory" : "text-ivory/75 hover:bg-ivory/6 hover:text-ivory"
+                active ? "bg-ivory/20 text-ivory" : "text-ivory hover:bg-ivory/10"
               }`}
             >
-              <span className={`relative h-10 w-14 shrink-0 overflow-hidden border ${active ? "border-gold" : "border-ivory/15"}`}>
+              <span className={`relative h-12 w-16 shrink-0 overflow-hidden border ${active ? "border-gold-soft" : "border-ivory/30"}`}>
                 {thumb ? (
                   <img src={thumb} alt="" loading="lazy" className="h-full w-full object-cover" />
                 ) : (
@@ -146,16 +146,16 @@ function GroupList({ tour, currentGroupId, currentAccessPointId, onSelect }: Tou
                 )}
               </span>
               <span className="min-w-0 flex-1">
-                <span className={`block truncate font-display text-lg leading-tight ${active ? "text-gold-soft" : ""}`}>{g.name}</span>
-                <span className="block truncate text-[11px] uppercase tracking-[0.16em] text-ivory/50">
+                <span className={`line-clamp-2 block font-display text-xl leading-snug ${active ? "font-medium" : ""}`}>{g.name}</span>
+                <span className="mt-0.5 block truncate text-xs uppercase tracking-[0.14em] text-ivory/85">
                   {g.accessPoints.length} {g.accessPoints.length === 1 ? "view" : "views"}
-                  {g.status === "draft" && <span className="ml-2 text-coral">Draft</span>}
+                  {g.status === "draft" && <span className="ml-2 text-gold-soft">Draft</span>}
                 </span>
               </span>
-              {multi && <ChevronDown className={`size-4 shrink-0 text-ivory/50 transition ${open ? "rotate-180" : ""}`} aria-hidden />}
+              {multi && <ChevronDown className={`size-5 shrink-0 text-ivory/85 transition ${open ? "rotate-180" : ""}`} aria-hidden />}
             </button>
             {multi && open && (
-              <ul className="mb-1 ml-[4.4rem] mr-2 min-w-0 border-l border-gold/25" role="list">
+              <ul className="mb-1.5 ml-[5.25rem] mr-2 min-w-0 border-l border-ivory/30" role="list">
                 {g.accessPoints.map((ap) => {
                   const cur = ap.id === currentAccessPointId;
                   return (
@@ -167,13 +167,13 @@ function GroupList({ tour, currentGroupId, currentAccessPointId, onSelect }: Tou
                         title={ap.name}
                         data-testid="tour-viewpoint"
                         data-active={cur}
-                        className={`-ml-px flex w-full min-w-0 items-center gap-2 border-l py-1.5 pl-3 pr-2 text-left text-sm transition ${
-                          cur ? "border-gold text-gold-soft" : "border-transparent text-ivory/70 hover:text-ivory"
+                        className={`-ml-px flex w-full min-w-0 items-center gap-2 border-l py-2 pl-3 pr-2 text-left text-[15px] leading-snug transition ${
+                          cur ? "border-ivory font-medium text-ivory" : "border-transparent text-ivory/90 hover:text-ivory"
                         }`}
                       >
-                        <span className={`size-1.5 shrink-0 rounded-full ${cur ? "bg-coral" : "bg-ivory/30"}`} aria-hidden />
-                        <span className="min-w-0 flex-1 truncate">{ap.name}</span>
-                        {ap.status === "draft" && <span className="shrink-0 text-[10px] uppercase text-coral">Draft</span>}
+                        <span className={`size-2 shrink-0 rounded-full ${cur ? "bg-gold-soft" : "bg-ivory/50"}`} aria-hidden />
+                        <span className="min-w-0 flex-1 break-words">{ap.name}</span>
+                        {ap.status === "draft" && <span className="shrink-0 text-[10px] uppercase text-gold-soft">Draft</span>}
                       </button>
                     </li>
                   );

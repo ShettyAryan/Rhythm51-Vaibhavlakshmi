@@ -21,6 +21,7 @@ interface SettingsValues {
   theme: Required<{ [K in keyof ThemeConfig]: string }>;
   contact: Required<{ [K in keyof ContactInfo]: string }>;
   autoPublish: boolean;
+  musicVolume: number;
   status: "draft" | "published";
 }
 
@@ -30,21 +31,50 @@ const THEME_FIELDS: { key: keyof SettingsValues["theme"]; label: string; fallbac
   { key: "accent", label: "Accent (gold)", fallback: "#c7a56a" },
   { key: "ivory", label: "Background (ivory)", fallback: "#faf7f0" },
   { key: "rose", label: "Rose", fallback: "#c86b79" },
+  { key: "menu", label: "Menu buttons", fallback: "#b83456" },
 ];
 
-export function SettingsForm({ initial, logo: initialLogo, hero: initialHero }: { initial: SettingsValues; logo: AdminAsset | null; hero: AdminAsset | null }) {
+export function SettingsForm({
+  initial,
+  logo: initialLogo,
+  hero: initialHero,
+  heroTablet: initialHeroTablet,
+  heroTabletPortrait: initialHeroTabletPortrait,
+  heroMobile: initialHeroMobile,
+  music: initialMusic,
+}: {
+  initial: SettingsValues;
+  logo: AdminAsset | null;
+  hero: AdminAsset | null;
+  heroTablet: AdminAsset | null;
+  heroTabletPortrait: AdminAsset | null;
+  heroMobile: AdminAsset | null;
+  music: AdminAsset | null;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [v, setV] = useState(initial);
   const [logo, setLogo] = useState(initialLogo);
   const [hero, setHero] = useState(initialHero);
+  const [heroTablet, setHeroTablet] = useState(initialHeroTablet);
+  const [heroTabletPortrait, setHeroTabletPortrait] = useState(initialHeroTabletPortrait);
+  const [heroMobile, setHeroMobile] = useState(initialHeroMobile);
+  const [music, setMusic] = useState(initialMusic);
   const [saving, setSaving] = useState(false);
   const set = <K extends keyof SettingsValues>(k: K, val: SettingsValues[K]) => setV((s) => ({ ...s, [k]: val }));
 
   const save = async () => {
     setSaving(true);
     try {
-      await api("PATCH", "/api/admin/project", { ...v, logoAssetId: logo?.id ?? null, heroAssetId: hero?.id ?? null });
+      await api("PATCH", "/api/admin/project", {
+        ...v,
+        logoAssetId: logo?.id ?? null,
+        heroAssetId: hero?.id ?? null,
+        heroTabletAssetId: heroTablet?.id ?? null,
+        heroTabletPortraitAssetId: heroTabletPortrait?.id ?? null,
+        heroMobileAssetId: heroMobile?.id ?? null,
+        musicAssetId: music?.id ?? null,
+      });
       toast.success(v.autoPublish ? "Saved and published" : "Saved. Publish to update the public site.");
       router.refresh();
     } catch (err) {
@@ -79,15 +109,39 @@ export function SettingsForm({ initial, logo: initialLogo, hero: initialHero }: 
         </div>
       </Panel>
 
-      <Panel title="Landing hero">
+      <Panel title="Landing hero" description="Each cover can be an image, an animated GIF or a video (MP4/WebM). Videos play silently on a loop. For videos, use MP4 (H.264), 10–20 seconds, under about 10 MB; GIFs are often heavier than an equivalent MP4.">
         <div className="space-y-4">
           <AssetPicker
-            label="Hero image"
+            label="Cover · desktop"
             value={hero}
             onChange={setHero}
-            categories={["image"]}
-            hint="Shown full-screen. Use a landscape image at least 2400px wide."
+            categories={["image", "video"]}
+            hint="Laptops and desktops, and the fallback for the others. Landscape 16:9, at least 2400×1350px."
             testId="hero-picker"
+          />
+          <AssetPicker
+            label="Cover · tablet landscape"
+            value={heroTablet}
+            onChange={setHeroTablet}
+            categories={["image", "video"]}
+            hint="Tablets held sideways (e.g. iPad 1180×820, 1366×1024). About 4:3, at least 2732×2048px. Falls back to the desktop image."
+            testId="hero-tablet-picker"
+          />
+          <AssetPicker
+            label="Cover · tablet portrait"
+            value={heroTabletPortrait}
+            onChange={setHeroTabletPortrait}
+            categories={["image", "video"]}
+            hint="Tablets held upright (e.g. iPad 820×1180, 1024×1366). About 3:4, at least 2048×2732px. Falls back to the mobile image."
+            testId="hero-tablet-portrait-picker"
+          />
+          <AssetPicker
+            label="Cover · mobile"
+            value={heroMobile}
+            onChange={setHeroMobile}
+            categories={["image", "video"]}
+            hint="Phones (narrower than 640px). Portrait 9:16, about 1290×2796px. Falls back to the tablet portrait image."
+            testId="hero-mobile-picker"
           />
           <Toggle checked={v.showHeroText} onChange={(b) => set("showHeroText", b)} label="Show headline over the image" description="Turn off for an image-only hero." />
           <Field label="Headline">
@@ -98,6 +152,31 @@ export function SettingsForm({ initial, logo: initialLogo, hero: initialHero }: 
           </Field>
           <Field label={`Darkening overlay · ${Math.round(v.heroOverlay * 100)}%`} hint="Improves text legibility on bright images.">
             <input type="range" min={0} max={0.9} step={0.05} value={v.heroOverlay} onChange={(e) => set("heroOverlay", Number(e.target.value))} className="w-full accent-plum" />
+          </Field>
+        </div>
+      </Panel>
+
+      <Panel title="Background music" description="Loops quietly on the landing page and tours. Visitors can mute it; their choice is remembered.">
+        <div className="space-y-4">
+          <AssetPicker
+            label="Music track"
+            value={music}
+            onChange={setMusic}
+            categories={["audio"]}
+            hint="MP3, ideally 1–3 minutes that loop cleanly, 128–192 kbps (about 2–4 MB). Browsers only start sound after the visitor's first tap or click."
+            testId="music-picker"
+          />
+          <Field label={`Volume · ${Math.round(v.musicVolume * 100)}%`}>
+            <input
+              type="range"
+              min={0.05}
+              max={1}
+              step={0.05}
+              value={v.musicVolume}
+              onChange={(e) => set("musicVolume", Number(e.target.value))}
+              className="w-full accent-plum"
+              data-testid="music-volume"
+            />
           </Field>
         </div>
       </Panel>

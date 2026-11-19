@@ -628,7 +628,7 @@ export const PanoramaViewer = forwardRef<PanoramaViewerHandle, PanoramaViewerPro
       )}
       {status === "error" && (
         <div className="absolute inset-0 grid place-items-center p-6 text-center" data-testid="panorama-error">
-          <div className="max-w-sm border border-gold/40 bg-wine/85 px-6 py-5 text-ivory backdrop-blur">
+          <div className="max-w-sm border border-gold/40 bg-menu/85 px-6 py-5 text-ivory backdrop-blur">
             <p className="font-display text-2xl">This view could not be loaded</p>
             <p className="mt-2 text-sm text-ivory/75">Check your connection, then try again or choose another viewpoint.</p>
             <button
@@ -648,7 +648,7 @@ export const PanoramaViewer = forwardRef<PanoramaViewerHandle, PanoramaViewerPro
       )}
       {status === "empty" && (
         <div className="absolute inset-0 grid place-items-center p-6 text-center" data-testid="panorama-empty">
-          <div className="max-w-sm border border-gold/40 bg-wine/85 px-6 py-5 text-ivory">
+          <div className="max-w-sm border border-gold/40 bg-menu/85 px-6 py-5 text-ivory">
             <p className="font-display text-2xl">No panorama yet</p>
             <p className="mt-2 text-sm text-ivory/75">A 360° image has not been assigned to this viewpoint.</p>
           </div>
@@ -668,7 +668,7 @@ function FlatFallback({ pano }: { pano: MediaRef | null }) {
   const src = pano.variants.md?.url ?? pano.url;
   return (
     <div className="absolute inset-0 flex flex-col bg-[#1d1418]" data-testid="panorama-fallback">
-      <p className="bg-wine px-4 py-2 text-center text-xs text-ivory/85">
+      <p className="bg-menu px-4 py-2 text-center text-xs text-ivory/85">
         Your browser can’t display the interactive 360° view. Scroll sideways to see the full panorama.
       </p>
       <div className="scroll-thin flex-1 overflow-x-auto overflow-y-hidden">

@@ -6,6 +6,7 @@ const VARS: Record<keyof ThemeConfig, string> = {
   accent: "--brand-accent",
   ivory: "--brand-ivory",
   rose: "--brand-rose",
+  menu: "--brand-menu",
 };
 
 /** Injects the project's brand colour overrides as CSS variables. */

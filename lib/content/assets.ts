@@ -3,7 +3,7 @@ import { ApiError } from "../errors";
 import { isPanoramaAspect, PANORAMA_ASPECT } from "../tour/geometry";
 import { getDb, query, queryOne, type Queryable } from "../db";
 import { getStorage } from "../storage";
-import { IMAGE_MIME, MAX_IMAGE_BYTES, MAX_PDF_BYTES } from "../validation";
+import { AUDIO_MIME, GIF_MIME, IMAGE_MIME, MAX_AUDIO_BYTES, MAX_IMAGE_BYTES, MAX_PDF_BYTES, MAX_VIDEO_BYTES, VIDEO_MIME } from "../validation";
 import { collectGarbage, markGarbage } from "./publish";
 import type { AssetCategory, AssetMetadata, AssetRow } from "./rows";
 
@@ -12,7 +12,21 @@ const EXT: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
   "application/pdf": "pdf",
+  "audio/mpeg": "mp3",
+  "image/gif": "gif",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
 };
+
+function maxBytes(category: AssetCategory) {
+  return category === "pdf"
+    ? MAX_PDF_BYTES
+    : category === "audio"
+      ? MAX_AUDIO_BYTES
+      : category === "video"
+        ? MAX_VIDEO_BYTES
+        : MAX_IMAGE_BYTES;
+}
 
 export const VARIANT_WIDTHS = { thumb: 640, md: 2048, lg: 4096 } as const;
 /** Panoramas larger than this (or any PNG) also get a full-resolution WebP copy. */
@@ -25,8 +39,14 @@ function newKey(projectId: string, assetId: string, ext: string, suffix = "") {
 export function assertCategoryMime(category: AssetCategory, mime: string, size: number) {
   const isImage = (IMAGE_MIME as readonly string[]).includes(mime);
   if (category === "pdf" && mime !== "application/pdf") throw new ApiError(400, "Only PDF files can be uploaded as documents.");
-  if (category !== "pdf" && !isImage) throw new ApiError(400, "Only JPEG, PNG or WebP images are accepted here.");
-  const max = category === "pdf" ? MAX_PDF_BYTES : MAX_IMAGE_BYTES;
+  if (category === "audio" && !(AUDIO_MIME as readonly string[]).includes(mime)) throw new ApiError(400, "Only MP3 audio files are accepted here.");
+  if (category === "video" && !(VIDEO_MIME as readonly string[]).includes(mime)) throw new ApiError(400, "Only MP4 or WebM videos are accepted here.");
+  if (category === "image" && mime === GIF_MIME) {
+    // Animated GIF (e.g. a cover): allowed in the general image category.
+  } else if (category !== "pdf" && category !== "audio" && category !== "video" && !isImage) {
+    throw new ApiError(400, "Only JPEG, PNG or WebP images are accepted here.");
+  }
+  const max = maxBytes(category);
   if (size > max) throw new ApiError(413, `File is too large (max ${Math.round(max / 1024 / 1024)} MB).`);
 }
 
@@ -52,8 +72,9 @@ export async function createReplacement(
   input: { fileName: string; mimeType: string; size: number },
 ) {
   const asset = await getAsset(projectId, assetId);
-  if (asset.category === "pdf" ? input.mimeType !== "application/pdf" : !input.mimeType.startsWith("image/")) {
-    throw new ApiError(400, "A replacement must be the same kind of file (image or PDF).");
+  const kind = (m: string) => (m === "application/pdf" ? "pdf" : m.split("/")[0]);
+  if (kind(input.mimeType) !== kind(asset.mime_type)) {
+    throw new ApiError(400, "A replacement must be the same kind of file (image, PDF or audio).");
   }
   assertCategoryMime(asset.category, input.mimeType, input.size);
   await query(
@@ -76,7 +97,7 @@ export async function receiveLocalUpload(projectId: string, assetId: string, req
   const asset = await getAsset(projectId, assetId);
   if (!asset.pending_key) throw new ApiError(409, "No upload is pending for this asset.");
   const declared = Number(asset.metadata.pendingSize ?? 0);
-  const limit = asset.category === "pdf" ? MAX_PDF_BYTES : MAX_IMAGE_BYTES;
+  const limit = maxBytes(asset.category);
   if (!request.body) throw new ApiError(400, "Empty upload");
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -101,6 +122,13 @@ function sniffMime(head: Buffer): string | null {
   if (head.length >= 8 && head.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
   if (head.length >= 12 && head.toString("ascii", 0, 4) === "RIFF" && head.toString("ascii", 8, 12) === "WEBP") return "image/webp";
   if (head.length >= 5 && head.toString("ascii", 0, 5) === "%PDF-") return "application/pdf";
+  // MP3: an ID3 tag, or straight into an MPEG audio frame (11-bit sync word).
+  if (head.length >= 6 && /^GIF8[79]a$/.test(head.toString("ascii", 0, 6))) return "image/gif";
+  // ISO base media (MP4): "ftyp" box at offset 4. WebM/Matroska: EBML magic.
+  if (head.length >= 8 && head.toString("ascii", 4, 8) === "ftyp") return "video/mp4";
+  if (head.length >= 4 && head.readUInt32BE(0) === 0x1a45dfa3) return "video/webm";
+  if (head.length >= 3 && head.toString("ascii", 0, 3) === "ID3") return "audio/mpeg";
+  if (head.length >= 2 && head[0] === 0xff && (head[1]! & 0xe0) === 0xe0) return "audio/mpeg";
   return null;
 }
 
@@ -121,7 +149,7 @@ export async function finalizeUpload(projectId: string, assetId: string) {
   if (sniffed !== declaredMime) {
     await storage.delete(asset.pending_key);
     await query("update assets set pending_key = null where id = $1", [assetId]);
-    throw new ApiError(400, "File contents do not match its type. Upload a genuine JPEG, PNG, WebP or PDF.");
+    throw new ApiError(400, "File contents do not match its type. Upload a genuine JPEG, PNG, WebP, GIF, PDF, MP3, MP4 or WebM file.");
   }
 
   let width: number | null = null;
@@ -137,13 +165,16 @@ export async function finalizeUpload(projectId: string, assetId: string) {
       throw new ApiError(400, "The image could not be decoded.");
     }
     width = meta.width ?? null;
-    height = meta.height ?? null;
+    // Animated GIFs report every frame stacked; one frame's height is pageHeight.
+    height = meta.pageHeight ?? meta.height ?? null;
     if (!width || !height) throw new ApiError(400, "The image has no dimensions.");
     if (asset.category === "panorama" && !isPanoramaAspect(width, height)) {
       throw new ApiError(400, `Panoramas must be full 360° equirectangular images, ${PANORAMA_ASPECT.label} (got ${width}×${height}).`);
     }
+    // GIFs are served as uploaded: resized WebP copies would lose the animation.
+    const makeVariants = declaredMime !== GIF_MIME;
     for (const [name, target] of Object.entries(VARIANT_WIDTHS) as [keyof typeof VARIANT_WIDTHS, number][]) {
-      if (width <= target * 1.15) continue;
+      if (!makeVariants || width <= target * 1.15) continue;
       const out = await sharp(buffer, { limitInputPixels: 300_000_000 })
         .rotate()
         .resize({ width: target })
@@ -208,7 +239,8 @@ export async function assetUsage(db: Queryable, assetId: string): Promise<AssetU
   const rows = (
     await db.query<AssetUsage>(
       `select 'Project settings' as kind, p.id, p.name, '/admin/settings' as href, p.status = 'published' as published
-         from projects p where p.logo_asset_id = $1 or p.hero_asset_id = $1
+         from projects p
+        where p.logo_asset_id = $1 or p.hero_asset_id = $1 or p.hero_tablet_asset_id = $1 or p.hero_tablet_portrait_asset_id = $1 or p.hero_mobile_asset_id = $1 or p.music_asset_id = $1
        union all
        select case when t.type = 'rooms' then 'Room thumbnail' else 'Amenity thumbnail' end, g.id, g.name,
               '/admin/tours/' || t.type, g.status = 'published'
@@ -224,7 +256,7 @@ export async function assetUsage(db: Queryable, assetId: string): Promise<AssetU
        union all
        select case when d.type = 'brochure' then 'Brochure document' else 'Floor plan document' end, d.id,
               coalesce(nullif(d.title, ''), d.type), '/admin/documents', d.status = 'published'
-         from documents d where d.asset_id = $1`,
+         from documents d where exists (select 1 from document_files f where f.document_id = d.id and f.asset_id = $1)`,
       [assetId],
     )
   ).rows;

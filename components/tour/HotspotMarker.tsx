@@ -50,7 +50,7 @@ export const HotspotMarker = forwardRef<HTMLDivElement, HotspotMarkerProps>(func
           )}
         </span>
         <span
-          className="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap border border-gold/40 bg-wine/90 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-ivory opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+          className="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap border border-gold/40 bg-menu/90 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-ivory opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
           aria-hidden
         >
           {label}

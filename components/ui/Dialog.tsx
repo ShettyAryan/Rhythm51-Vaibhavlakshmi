@@ -62,12 +62,12 @@ export function Dialog({ open, onClose, title, hideHeader, className = "", child
         <div className="flex h-full max-h-[inherit] flex-col bg-ivory">
           {!hideHeader && (
             <div className="flex items-center justify-between gap-4 border-b border-gold/30 px-5 py-3">
-              <h2 className="font-display text-xl text-plum">{title}</h2>
+              <h2 className="font-display text-xl text-menu">{title}</h2>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="grid size-9 place-items-center rounded-full text-plum transition hover:bg-plum/10"
+                className="grid size-9 place-items-center rounded-full text-menu transition hover:bg-menu/10"
               >
                 <X className="size-5" />
               </button>

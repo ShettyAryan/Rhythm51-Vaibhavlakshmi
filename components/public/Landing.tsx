@@ -1,12 +1,16 @@
 "use client";
 
-import { BookOpen, Compass, Info, LayoutPanelTop, Trees } from "lucide-react";
+import { BookOpen, Compass, Expand, Info, LayoutPanelTop, Minimize, Trees } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import type { DocumentRef, Snapshot } from "@/lib/tour/types";
-import { PdfViewer } from "@/components/pdf/PdfViewer";
+import { useLayoutEffect, useState } from "react";
+import type { DocumentRef, MediaRef, Snapshot } from "@/lib/tour/types";
 import { Dialog } from "@/components/ui/Dialog";
-import { Ribbon } from "./Ribbon";
+import { useFullscreen } from "@/components/ui/useFullscreen";
+import { BackgroundMusic } from "./BackgroundMusic";
+import { ConstructXRBadge } from "./ConstructXRBadge";
+import { HeroMedia } from "./HeroMedia";
+import { IntroScreen } from "./IntroScreen";
+import { DocumentViewer, documentFiles } from "./DocumentViewer";
 
 interface LandingProps {
   snapshot: Snapshot;
@@ -15,14 +19,43 @@ interface LandingProps {
   /** Suffix for tour links: "?drafts=1" in preview, "/index.html" on the static site. */
   tourQuery?: string;
   banner?: React.ReactNode;
+  /** Show the opening intro (public site). Off in the admin preview. */
+  intro?: boolean;
+}
+
+const INTRO_KEY = "intro.done";
+
+/**
+ * The intro plays once per browser session (coming back from a tour doesn't
+ * replay it). Automated browsers skip it so tests start on the landing page.
+ */
+function introAlreadySeen() {
+  try {
+    if (window.sessionStorage.getItem(INTRO_KEY) === "1") return true;
+  } catch {}
+  return navigator.webdriver === true;
 }
 
 type ModalKind = "floorPlan" | "brochure" | "about" | null;
 
-export function Landing({ snapshot, tourBase, tourQuery = "", banner }: LandingProps) {
+export function Landing({ snapshot, tourBase, tourQuery = "", banner, intro = true }: LandingProps) {
   const router = useRouter();
   const { project, documents, tours } = snapshot;
   const [modal, setModal] = useState<ModalKind>(null);
+  const fullscreen = useFullscreen();
+  // Rendered on the server with the intro shown; hidden before the first paint
+  // when it has already been seen, so there is no flash either way.
+  const [showIntro, setShowIntro] = useState(intro);
+  const [coverReady, setCoverReady] = useState(false);
+  useLayoutEffect(() => {
+    if (intro && introAlreadySeen()) setShowIntro(false);
+  }, [intro]);
+  const finishIntro = () => {
+    try {
+      window.sessionStorage.setItem(INTRO_KEY, "1");
+    } catch {}
+    setShowIntro(false);
+  };
   const labels = project.navLabels;
   const hasAbout = !!(project.aboutText || Object.keys(project.contact).length);
 
@@ -45,34 +78,31 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner }: LandingP
     { key: "brochure", label: labels.brochure, icon: BookOpen, available: true, onClick: () => setModal("brochure") },
   ] as const;
 
-  const heroSrc = project.hero?.variants.lg?.url ?? project.hero?.url;
-  const heroSrcSet = project.hero
-    ? [project.hero.variants.md && `${project.hero.variants.md.url} ${project.hero.variants.md.width}w`,
-        project.hero.variants.lg && `${project.hero.variants.lg.url} ${project.hero.variants.lg.width}w`,
-        project.hero.width && `${project.hero.url} ${project.hero.width}w`]
-        .filter(Boolean)
-        .join(", ")
-    : undefined;
+  // The browser uses the first <source> whose media query matches, else the desktop
+  // image. Upright screens get a portrait image, so tall tablets are not cropped
+  // down to a sliver of a landscape picture.
+  const { hero, heroTablet, heroTabletPortrait, heroMobile } = project;
+  const desktopHero = hero ?? heroTablet ?? heroTabletPortrait ?? heroMobile ?? null;
+  const heroSources = [
+    // Phones.
+    { media: "(max-width: 639px)", ref: heroMobile ?? heroTabletPortrait },
+    // Tablets held upright (and any other portrait screen).
+    { media: "(orientation: portrait)", ref: heroTabletPortrait ?? heroMobile },
+    // Tablets held sideways: small landscape screens, or touch screens up to iPad Pro size.
+    { media: "(max-width: 1023px), (max-width: 1366px) and (pointer: coarse)", ref: heroTablet },
+  ].filter((s): s is { media: string; ref: MediaRef } => !!s.ref);
 
   return (
-    <main className="relative h-dvh w-full overflow-hidden bg-wine text-ivory" data-testid="landing">
+    <main className="relative h-dvh w-full overflow-hidden bg-wine text-ivory" data-testid="landing" data-intro={showIntro ? "showing" : "done"}>
+      {showIntro && <IntroScreen coverReady={coverReady || !desktopHero} onDone={finishIntro} />}
       {/* Hero */}
-      {heroSrc ? (
-        <img
-          src={heroSrc}
-          srcSet={heroSrcSet || undefined}
-          sizes="100vw"
-          alt={project.name ? `${project.name}` : "Property"}
-          className="absolute inset-0 h-full w-full object-cover"
-          fetchPriority="high"
-          data-testid="hero-image"
-        />
+      {desktopHero ? (
+        <HeroMedia fallback={desktopHero} sources={heroSources} alt={project.name || "Property"} onReady={() => setCoverReady(true)} />
       ) : (
         <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_70%_20%,#893b46_0%,#56163b_45%,#351020_100%)]" data-testid="hero-placeholder" />
       )}
       <div className="absolute inset-0 bg-black" style={{ opacity: project.heroOverlay }} aria-hidden />
       <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#1a0812]/85 to-transparent" aria-hidden />
-      <Ribbon className="pointer-events-none absolute -right-24 -top-24 w-[42rem] max-w-[90vw] opacity-90 sm:-right-16 sm:-top-28" />
 
       {banner}
 
@@ -80,26 +110,35 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner }: LandingP
       <header className="absolute inset-x-0 top-0 z-10 flex items-start justify-between px-5 pt-5 sm:px-10 sm:pt-8">
         <div className="animate-fade-up">
           {project.logo ? (
-            <img src={project.logo.url} alt={project.name || "Logo"} className="h-12 w-auto drop-shadow-lg sm:h-16" />
+            <img src={project.logo.url} alt={project.name || "Logo"} className="h-16 w-auto drop-shadow-lg sm:h-20 lg:h-24" />
           ) : project.name ? (
             <p className="font-display text-3xl tracking-wide drop-shadow">{project.name}</p>
           ) : null}
           {project.developerName && <p className="eyebrow mt-2 text-gold-soft/90 drop-shadow">by {project.developerName}</p>}
         </div>
-        {hasAbout && (
-          <button
-            type="button"
-            onClick={() => setModal("about")}
-            className="relative z-10 flex items-center gap-2 border border-ivory/30 bg-black/20 px-3 py-2 text-xs uppercase tracking-[0.2em] backdrop-blur transition hover:border-gold hover:text-gold"
-          >
-            <Info className="size-4" /> About
-          </button>
-        )}
+        <div className="relative z-10 flex items-center gap-2">
+          <BackgroundMusic
+            music={project.music}
+            volume={project.musicVolume}
+            armed={!showIntro}
+            className="flex items-center border border-ivory/30 bg-black/20 px-2.5 py-2 backdrop-blur transition hover:border-gold hover:text-gold"
+            iconClassName="size-5"
+          />
+          {hasAbout && (
+            <button
+              type="button"
+              onClick={() => setModal("about")}
+              className="flex items-center gap-2 border border-ivory/30 bg-black/20 px-3 py-2 text-xs uppercase tracking-[0.2em] backdrop-blur transition hover:border-gold hover:text-gold"
+            >
+              <Info className="size-5" /> About
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Headline */}
       {project.showHeroText && (project.heroHeadline || project.heroSubtitle) && (
-        <div className="absolute inset-x-0 bottom-[calc(9.5rem+env(safe-area-inset-bottom))] z-10 px-6 sm:bottom-44 sm:px-12 lg:px-16">
+        <div className="absolute inset-x-0 bottom-[calc(13rem+env(safe-area-inset-bottom))] z-10 px-6 sm:bottom-60 sm:px-12 lg:bottom-44 lg:px-16">
           <div className="max-w-3xl animate-fade-up [animation-delay:150ms]">
             {project.heroHeadline && (
               <h1 className="font-display text-4xl font-light leading-[1.05] tracking-wide drop-shadow-[0_2px_18px_rgba(0,0,0,0.45)] sm:text-6xl lg:text-7xl" data-testid="hero-headline">
@@ -112,15 +151,29 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner }: LandingP
       )}
 
       {/* Bottom navigation */}
-      <nav
-        aria-label="Explore"
-        className="absolute inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-8 sm:pb-8"
-      >
-        <div className="mx-auto max-w-5xl animate-fade-up border border-gold/45 bg-[#2a0d1c]/72 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md [animation-delay:300ms]">
-          <div className="ornament hidden px-8 pt-3 sm:flex" aria-hidden>
-            <span className="eyebrow text-[0.6rem] text-gold/90">Discover</span>
+      {/* Phones and tablets: full-screen + ConstructXR sit in a row above the menu.
+          Laptops and wider: they move into the bottom corners, level with the menu. */}
+      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-3 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-8 sm:pb-8 lg:grid lg:grid-cols-[1fr_minmax(0,48rem)_1fr] lg:items-center lg:gap-6">
+        <div className="flex min-h-12 items-center justify-between gap-3 px-1 lg:contents">
+          <div className="lg:col-start-1 lg:row-start-1 lg:justify-self-start">
+            {fullscreen.supported && (
+              <button
+                type="button"
+                onClick={fullscreen.toggle}
+                className="grid size-12 place-items-center rounded-full border border-gold-soft/50 bg-black/30 text-ivory shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition hover:border-gold-soft hover:bg-menu/90"
+                aria-label={fullscreen.active ? "Exit full screen" : "Full screen"}
+                title={fullscreen.active ? "Exit full screen" : "Full screen"}
+                data-testid="landing-fullscreen"
+              >
+                {fullscreen.active ? <Minimize className="size-5" /> : <Expand className="size-5" />}
+              </button>
+            )}
           </div>
-          <ul className="grid grid-cols-4 divide-x divide-gold/25" role="list">
+          <ConstructXRBadge className="lg:col-start-3 lg:row-start-1 lg:justify-self-end" />
+        </div>
+      <nav aria-label="Explore" className="lg:col-start-2 lg:row-start-1">
+        <div className="mx-auto max-w-3xl animate-fade-up [animation-delay:300ms]" data-testid="landing-menu">
+          <ul className="grid grid-cols-4 gap-2 sm:gap-3" role="list">
             {actions.map(({ key, label, icon: Icon, available, onClick }) => (
               <li key={key}>
                 <button
@@ -128,10 +181,10 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner }: LandingP
                   onClick={onClick}
                   disabled={!available}
                   data-testid={`nav-${key}`}
-                  className="group flex h-full w-full flex-col items-center justify-center gap-1.5 px-1 py-3 text-center transition hover:bg-ivory/[0.06] disabled:cursor-not-allowed disabled:opacity-45 sm:gap-2 sm:py-5"
+                  className="group flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border border-gold-soft/50 bg-menu/92 px-1 py-2.5 text-center shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-menu hover:shadow-[0_14px_36px_rgba(0,0,0,0.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-soft disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 sm:gap-1.5 sm:rounded-full sm:px-3 sm:py-3.5"
                 >
-                  <Icon className="size-5 text-gold transition duration-300 group-hover:-translate-y-0.5 group-hover:text-gold-soft sm:size-6" strokeWidth={1.25} aria-hidden />
-                  <span className="text-[0.62rem] font-medium uppercase leading-tight tracking-[0.14em] text-ivory sm:text-xs sm:tracking-[0.24em]">
+                  <Icon className="size-6 text-gold-soft sm:size-7 transition duration-300 group-hover:text-ivory" strokeWidth={1.25} aria-hidden />
+                  <span className="text-[0.6rem] font-medium uppercase leading-tight tracking-[0.12em] text-ivory sm:text-[0.7rem] sm:tracking-[0.18em]">
                     {label}
                   </span>
                   {!available && <span className="sr-only">(not available yet)</span>}
@@ -141,6 +194,7 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner }: LandingP
           </ul>
         </div>
       </nav>
+      </div>
 
       <DocumentModal
         open={modal === "floorPlan"}
@@ -162,16 +216,16 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner }: LandingP
           {Object.keys(project.contact).length > 0 && (
             <dl className="mt-5 space-y-2 border-t border-gold/30 pt-4 text-sm">
               {project.contact.phone && (
-                <div className="flex gap-3"><dt className="eyebrow w-20 text-plum/70">Phone</dt><dd><a className="hover:text-plum" href={`tel:${project.contact.phone.replace(/[^\d+]/g, "")}`}>{project.contact.phone}</a></dd></div>
+                <div className="flex gap-3"><dt className="eyebrow w-20 text-menu/70">Phone</dt><dd><a className="hover:text-menu" href={`tel:${project.contact.phone.replace(/[^\d+]/g, "")}`}>{project.contact.phone}</a></dd></div>
               )}
               {project.contact.email && (
-                <div className="flex gap-3"><dt className="eyebrow w-20 text-plum/70">Email</dt><dd><a className="hover:text-plum" href={`mailto:${project.contact.email}`}>{project.contact.email}</a></dd></div>
+                <div className="flex gap-3"><dt className="eyebrow w-20 text-menu/70">Email</dt><dd><a className="hover:text-menu" href={`mailto:${project.contact.email}`}>{project.contact.email}</a></dd></div>
               )}
               {project.contact.website && (
-                <div className="flex gap-3"><dt className="eyebrow w-20 text-plum/70">Web</dt><dd><a className="hover:text-plum" href={project.contact.website} target="_blank" rel="noopener noreferrer">{project.contact.website.replace(/^https?:\/\//, "")}</a></dd></div>
+                <div className="flex gap-3"><dt className="eyebrow w-20 text-menu/70">Web</dt><dd><a className="hover:text-menu" href={project.contact.website} target="_blank" rel="noopener noreferrer">{project.contact.website.replace(/^https?:\/\//, "")}</a></dd></div>
               )}
               {project.contact.address && (
-                <div className="flex gap-3"><dt className="eyebrow w-20 text-plum/70">Address</dt><dd className="whitespace-pre-line">{project.contact.address}</dd></div>
+                <div className="flex gap-3"><dt className="eyebrow w-20 text-menu/70">Address</dt><dd className="whitespace-pre-line">{project.contact.address}</dd></div>
               )}
             </dl>
           )}
@@ -182,17 +236,18 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner }: LandingP
 }
 
 function DocumentModal({ open, onClose, title, doc, testId }: { open: boolean; onClose: () => void; title: string; doc: DocumentRef | null; testId: string }) {
+  const hasFiles = documentFiles(doc).length > 0;
   return (
-    <Dialog open={open} onClose={onClose} title={title} hideHeader={!!doc} className="h-[calc(100dvh-1.5rem)] w-[min(calc(100vw-1.5rem),1200px)]" testId={testId}>
-      {doc ? (
-        <PdfViewer url={doc.url} title={doc.title || title} downloadUrl={doc.downloadUrl} fileName={doc.fileName} onClose={onClose} />
+    <Dialog open={open} onClose={onClose} title={title} hideHeader={hasFiles} className="h-[calc(100dvh-1.5rem)] w-[min(calc(100vw-1.5rem),1200px)]" testId={testId}>
+      {doc && hasFiles ? (
+        <DocumentViewer doc={doc} title={title} onClose={onClose} />
       ) : (
         <div className="grid flex-1 place-items-center px-8 py-16 text-center" data-testid="document-empty">
           <div className="max-w-sm">
             <BookOpen className="mx-auto size-10 text-gold" strokeWidth={1} />
-            <p className="mt-4 font-display text-3xl text-plum">Available soon</p>
+            <p className="mt-4 font-display text-3xl text-menu">Available soon</p>
             <p className="mt-2 text-sm text-stone">The {title.toLowerCase()} has not been published yet. Please check back later.</p>
-            <button type="button" onClick={onClose} className="mt-6 border border-plum/40 px-5 py-2 text-xs uppercase tracking-[0.2em] text-plum hover:bg-plum/5">
+            <button type="button" onClick={onClose} className="mt-6 border border-menu/40 px-5 py-2 text-xs uppercase tracking-[0.2em] text-menu hover:bg-menu/5">
               Close
             </button>
           </div>

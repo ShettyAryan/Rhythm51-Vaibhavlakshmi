@@ -18,8 +18,8 @@ export interface AssetRow {
   updated_at: string | Date;
 }
 
-export type AssetCategory = "panorama" | "image" | "floor_plan_image" | "pdf";
-export const ASSET_CATEGORIES: AssetCategory[] = ["panorama", "image", "floor_plan_image", "pdf"];
+export type AssetCategory = "panorama" | "image" | "floor_plan_image" | "pdf" | "audio" | "video";
+export const ASSET_CATEGORIES: AssetCategory[] = ["panorama", "image", "floor_plan_image", "pdf", "audio", "video"];
 
 export interface AssetMetadata {
   variants?: Partial<Record<"thumb" | "md" | "lg" | "full", { key: string; width: number; height: number }>>;
@@ -37,6 +37,10 @@ export interface ProjectRow {
   developer_name: string;
   logo_asset_id: string | null;
   hero_asset_id: string | null;
+  hero_tablet_asset_id: string | null;
+  hero_tablet_portrait_asset_id: string | null;
+  hero_mobile_asset_id: string | null;
+  music_asset_id: string | null;
   hero_headline: string;
   hero_subtitle: string;
   show_hero_text: boolean;
@@ -45,7 +49,7 @@ export interface ProjectRow {
   nav_labels: Record<string, string>;
   theme: Record<string, string>;
   contact: Record<string, string>;
-  settings: { autoPublish?: boolean };
+  settings: { autoPublish?: boolean; musicVolume?: number };
   status: "draft" | "published";
   created_at: string | Date;
   updated_at: string | Date;

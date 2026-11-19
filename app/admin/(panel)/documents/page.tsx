@@ -10,7 +10,7 @@ export default async function DocumentsPage() {
   if (!project) return <PageHeader title="Documents" description="Create a project first." />;
   return (
     <>
-      <PageHeader title="Documents" description="PDFs opened by the Floor Plan and Brochure buttons on the landing page." />
+      <PageHeader title="Documents" description="Files opened by the Floor Plan and Brochure buttons on the landing page. Add several PDFs or images to show them as tabs." />
       <DocumentsManager initial={await listDocuments(project.id)} />
     </>
   );

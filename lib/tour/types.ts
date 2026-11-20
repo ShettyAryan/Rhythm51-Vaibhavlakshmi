@@ -137,6 +137,7 @@ export interface NavLabels {
   amenities: string;
   floorPlan: string;
   brochure: string;
+  renders: string;
 }
 
 export interface ThemeConfig {
@@ -161,7 +162,8 @@ export interface Snapshot {
   builtAt: string;
   mode: "published" | "preview";
   project: ProjectData;
-  documents: { floorPlan: DocumentRef | null; brochure: DocumentRef | null };
+  /** `renders` is absent in publications made before the Renders gallery existed. */
+  documents: { floorPlan: DocumentRef | null; brochure: DocumentRef | null; renders?: DocumentRef | null };
   tours: Record<TourType, TourData | null>;
 }
 
@@ -170,4 +172,5 @@ export const DEFAULT_NAV_LABELS: NavLabels = {
   amenities: "Explore Amenities",
   floorPlan: "Floor Plan",
   brochure: "Brochure",
+  renders: "Renders",
 };

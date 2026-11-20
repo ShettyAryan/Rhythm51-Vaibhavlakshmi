@@ -160,6 +160,25 @@ describe("published snapshot", () => {
     await deleteAsset(ids.project!, image);
   });
 
+  it("renders gallery: images only, in order, with captions", async () => {
+    const make = async (name: string) =>
+      (await importFile(ids.project!, { fileName: name, mimeType: "image/png", data: await png(160, 90), category: "image" })).id;
+    const [a, b] = [await make("living.png"), await make("terrace.png")];
+    const pdf = (await importFile(ids.project!, { fileName: "r.pdf", mimeType: "application/pdf", data: Buffer.from("%PDF-1.4\n%%EOF"), category: "pdf" })).id;
+    await expect(upsertDocument(ids.project!, "renders", { files: [{ assetId: pdf, title: "" }] })).rejects.toThrow(/image/i);
+
+    await upsertDocument(ids.project!, "renders", { files: [{ assetId: b, title: "Terrace" }, { assetId: a, title: "Living room" }], status: "published" });
+    const snap = (await buildSnapshot(db, ids.project!, { mode: "published" }))!.snapshot;
+    expect(snap.documents.renders?.title).toBe("Renders");
+    expect(snap.documents.renders?.files.map((f) => [f.id, f.title, f.kind])).toEqual([[b, "Terrace", "image"], [a, "Living room", "image"]]);
+    expect(snap.project.navLabels.renders).toBe("Renders");
+    await expect(deleteAsset(ids.project!, a)).rejects.toThrow();
+
+    await upsertDocument(ids.project!, "renders", { files: [] });
+    expect((await buildSnapshot(db, ids.project!, { mode: "published" }))!.snapshot.documents.renders).toBeNull();
+    for (const id of [a, b, pdf]) await deleteAsset(ids.project!, id);
+  });
+
   it("covers can be GIFs or videos", async () => {
     // GIF: kept as-is (no WebP renditions, which would drop the animation).
     const gifData = await sharp({ create: { width: 900, height: 500, channels: 3, background: "#b83456" } }).gif().toBuffer();

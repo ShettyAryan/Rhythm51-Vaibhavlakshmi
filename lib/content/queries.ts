@@ -2,7 +2,7 @@ import { getDb, query, queryOne } from "../db";
 import type { MediaRef, TourType } from "../tour/types";
 import { draftSummary, getTourRow } from "./manage";
 import { getLatestPublication } from "./publish";
-import type { AssetRow } from "./rows";
+import { DOCUMENT_TITLES, type AssetRow, type DocumentType } from "./rows";
 import { toMediaRef } from "./snapshot";
 
 export interface AdminAsset {
@@ -237,17 +237,15 @@ export async function listDocuments(projectId: string) {
       where d.project_id = $1 order by f.display_order, f.created_at`,
     [projectId],
   );
-  const out: Record<"floor_plan" | "brochure", AdminDocument> = {
-    floor_plan: { title: "Floor Plan", status: "draft", allowDownload: false, files: [] },
-    brochure: { title: "Brochure", status: "draft", allowDownload: false, files: [] },
-  };
+  const empty = (type: DocumentType): AdminDocument => ({ title: DOCUMENT_TITLES[type], status: "draft", allowDownload: false, files: [] });
+  const out: Record<DocumentType, AdminDocument> = { floor_plan: empty("floor_plan"), brochure: empty("brochure"), renders: empty("renders") };
   for (const d of rows) {
     const files: AdminDocument["files"] = [];
     for (const f of fileRows.filter((r) => r.document_id === d.id)) {
       const asset = await getAdminAsset(projectId, f.asset_id);
       if (asset) files.push({ title: f.title, asset });
     }
-    out[d.type as "floor_plan" | "brochure"] = { title: d.title, status: d.status, allowDownload: d.allow_download, files };
+    out[d.type as DocumentType] = { title: d.title, status: d.status, allowDownload: d.allow_download, files };
   }
   return out;
 }

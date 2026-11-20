@@ -184,7 +184,7 @@ export function SettingsForm({
       <Panel title="Navigation labels">
         <div className="grid gap-4 sm:grid-cols-2">
           {(Object.keys(v.navLabels) as (keyof NavLabels)[]).map((k) => (
-            <Field key={k} label={{ rooms: "Rooms button", amenities: "Amenities button", floorPlan: "Floor plan button", brochure: "Brochure button" }[k]}>
+            <Field key={k} label={{ rooms: "Rooms button", amenities: "Amenities button", floorPlan: "Floor plan button", brochure: "Brochure button", renders: "Renders button" }[k]}>
               <Input value={v.navLabels[k]} maxLength={40} onChange={(e) => set("navLabels", { ...v.navLabels, [k]: e.target.value })} />
             </Field>
           ))}

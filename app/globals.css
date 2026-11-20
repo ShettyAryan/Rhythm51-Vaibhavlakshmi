@@ -208,6 +208,13 @@ dialog[open] {
   animation-play-state: paused;
 }
 
+/* Render gallery: each picture eases in when you move to it. */
+@keyframes render-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes spin-slow {
   to {
     transform: rotate(360deg);

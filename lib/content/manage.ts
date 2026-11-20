@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getDb, query, queryOne, type Queryable } from "../db";
 import { ApiError } from "../errors";
 import type { TourType } from "../tour/types";
+import { DOCUMENT_TITLES, type DocumentType } from "./rows";
 import type {
   accessPointUpdateSchema,
   documentUpdateSchema,
@@ -410,17 +411,18 @@ export async function deleteFloorPlan(projectId: string, planId: string) {
 // Documents
 // ---------------------------------------------------------------------------
 
-export async function upsertDocument(projectId: string, type: "floor_plan" | "brochure", input: Input<typeof documentUpdateSchema>) {
+export async function upsertDocument(projectId: string, type: DocumentType, input: Input<typeof documentUpdateSchema>) {
   const db = await getDb();
   const files =
     input.files ?? (input.assetId !== undefined ? (input.assetId ? [{ assetId: input.assetId, title: "" }] : []) : undefined);
-  for (const f of files ?? []) await assertAsset(db, projectId, f.assetId, "document");
+  // Renders are a picture gallery: images only. The floor plan and brochure also take PDFs.
+  for (const f of files ?? []) await assertAsset(db, projectId, f.assetId, type === "renders" ? "image" : "document");
   await db.transaction(async (tx) => {
     const doc = (
       await tx.query<{ id: string }>(
         `insert into documents (project_id, type, title) values ($1, $2, $3)
          on conflict (project_id, type) do update set type = excluded.type returning id`,
-        [projectId, type, type === "brochure" ? "Brochure" : "Floor Plan"],
+        [projectId, type, DOCUMENT_TITLES[type]],
       )
     ).rows[0]!;
     const set = updateSet({ title: input.title, status: input.status, allow_download: input.allowDownload });

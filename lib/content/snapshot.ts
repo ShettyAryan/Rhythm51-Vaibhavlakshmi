@@ -14,7 +14,7 @@ import {
   type TourData,
   type TourType,
 } from "../tour/types";
-import type { AssetRow } from "./rows";
+import type { AssetRow, DocumentType } from "./rows";
 
 /**
  * Builds the visitor-facing content tree for a project.
@@ -181,7 +181,7 @@ export async function buildSnapshot(
       [projectId],
     )
   ).rows;
-  const doc = (type: "floor_plan" | "brochure"): DocumentRef | null => {
+  const doc = (type: DocumentType): DocumentRef | null => {
     const d = docRows.find((r) => r.type === type);
     if (!d || !visible(d.status)) return null;
     const files: DocumentFile[] = [];
@@ -234,7 +234,7 @@ export async function buildSnapshot(
     builtAt: new Date().toISOString(),
     mode: opts.mode,
     project: projectData,
-    documents: { floorPlan: doc("floor_plan"), brochure: doc("brochure") },
+    documents: { floorPlan: doc("floor_plan"), brochure: doc("brochure"), renders: doc("renders") },
     tours,
   };
   return { snapshot, assets: used };

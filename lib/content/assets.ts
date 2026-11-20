@@ -254,7 +254,7 @@ export async function assetUsage(db: Queryable, assetId: string): Promise<AssetU
        select 'Floor plan', f.id, f.name, '/admin/floor-plans/' || f.id, f.status = 'published'
          from floor_plans f where f.image_asset_id = $1 or f.original_pdf_asset_id = $1
        union all
-       select case when d.type = 'brochure' then 'Brochure document' else 'Floor plan document' end, d.id,
+       select case d.type when 'brochure' then 'Brochure document' when 'renders' then 'Renders gallery' else 'Floor plan document' end, d.id,
               coalesce(nullif(d.title, ''), d.type), '/admin/documents', d.status = 'published'
          from documents d where exists (select 1 from document_files f where f.document_id = d.id and f.asset_id = $1)`,
       [assetId],

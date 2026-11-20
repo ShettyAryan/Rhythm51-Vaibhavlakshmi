@@ -51,6 +51,7 @@ export const projectSettingsSchema = z
       amenities: text(40),
       floorPlan: text(40),
       brochure: text(40),
+      renders: text(40).optional(),
     }),
     theme: z.object({ primary: color, primaryDark: color, accent: color, ivory: color, rose: color, menu: color.optional() }),
     contact: z.object({ phone: text(40), email: text(120), website: url, address: text(300) }),

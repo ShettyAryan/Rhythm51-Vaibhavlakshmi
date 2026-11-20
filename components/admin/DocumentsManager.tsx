@@ -4,11 +4,12 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { AdminAsset, AdminDocument } from "@/lib/content/queries";
+import type { DocumentType } from "@/lib/content/rows";
 import { api } from "./client";
 import { AssetPicker } from "./MediaLibrary";
 import { Button, Field, Input, Panel, StatusSelect, Toggle, useToast } from "./ui";
 
-type DocType = "floor_plan" | "brochure";
+type DocType = DocumentType;
 interface FileRow {
   key: number;
   title: string;
@@ -20,6 +21,7 @@ export function DocumentsManager({ initial }: { initial: Record<DocType, AdminDo
     <div className="grid gap-6 lg:grid-cols-2">
       <DocumentPanel type="floor_plan" heading="Floor plan" initial={initial.floor_plan} />
       <DocumentPanel type="brochure" heading="Brochure" initial={initial.brochure} />
+      <DocumentPanel type="renders" heading="Renders" initial={initial.renders} />
     </div>
   );
 }
@@ -45,7 +47,14 @@ function DocumentPanel({ type, heading, initial }: { type: DocType; heading: str
     });
 
   return (
-    <Panel title={heading} description="Each file becomes a tab in the viewer, in this order. PDFs and images (JPEG, PNG, WebP) are supported.">
+    <Panel
+      title={heading}
+      description={
+        type === "renders"
+          ? "A gallery of render images, shown in this order. The label is the caption under each picture. Use landscape images at least 2400px wide."
+          : "Each file becomes a tab in the viewer, in this order. PDFs and images (JPEG, PNG, WebP) are supported."
+      }
+    >
       <form
         className="space-y-4"
         data-testid={`doc-${type}`}
@@ -92,13 +101,16 @@ function DocumentPanel({ type, heading, initial }: { type: DocType; heading: str
               </div>
               <div className="space-y-3">
                 <AssetPicker
-                  label="PDF or image"
+                  label={type === "renders" ? "Render image" : "PDF or image"}
                   value={f.asset}
                   onChange={(asset) => update(f.key, { asset })}
-                  categories={["pdf", "floor_plan_image", "image"]}
+                  categories={type === "renders" ? ["image"] : ["pdf", "floor_plan_image", "image"]}
                   testId={i === 0 ? `doc-${type}-picker` : `doc-${type}-picker-${i}`}
                 />
-                <Field label="Tab label" hint="Optional. Defaults to the file name. Only shown when there is more than one file.">
+                <Field
+                  label={type === "renders" ? "Caption" : "Tab label"}
+                  hint={type === "renders" ? "Optional, e.g. “Living room”. Shown under the picture." : "Optional. Defaults to the file name. Only shown when there is more than one file."}
+                >
                   <Input value={f.title} maxLength={80} placeholder="e.g. 3 BHK — Type A" onChange={(e) => update(f.key, { title: e.target.value })} />
                 </Field>
               </div>

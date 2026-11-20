@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Compass, Expand, Info, LayoutPanelTop, Minimize, Trees } from "lucide-react";
+import { BookOpen, Compass, Expand, Images, Info, LayoutPanelTop, Minimize, Trees } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLayoutEffect, useState } from "react";
 import type { DocumentRef, MediaRef, Snapshot } from "@/lib/tour/types";
@@ -10,6 +10,7 @@ import { BackgroundMusic } from "./BackgroundMusic";
 import { ConstructXRBadge } from "./ConstructXRBadge";
 import { HeroMedia } from "./HeroMedia";
 import { IntroScreen } from "./IntroScreen";
+import { RendersGallery } from "./RendersGallery";
 import { DocumentViewer, documentFiles } from "./DocumentViewer";
 
 interface LandingProps {
@@ -36,7 +37,7 @@ function introAlreadySeen() {
   return navigator.webdriver === true;
 }
 
-type ModalKind = "floorPlan" | "brochure" | "about" | null;
+type ModalKind = "floorPlan" | "brochure" | "renders" | "about" | null;
 
 export function Landing({ snapshot, tourBase, tourQuery = "", banner, intro = true }: LandingProps) {
   const router = useRouter();
@@ -76,6 +77,13 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner, intro = tr
     },
     { key: "floorPlan", label: labels.floorPlan, icon: LayoutPanelTop, available: true, onClick: () => setModal("floorPlan") },
     { key: "brochure", label: labels.brochure, icon: BookOpen, available: true, onClick: () => setModal("brochure") },
+    {
+      key: "renders",
+      label: labels.renders ?? "Renders",
+      icon: Images,
+      available: documentFiles(documents.renders).some((f) => f.kind === "image"),
+      onClick: () => setModal("renders"),
+    },
   ] as const;
 
   // The browser uses the first <source> whose media query matches, else the desktop
@@ -153,7 +161,7 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner, intro = tr
       {/* Bottom navigation */}
       {/* Phones and tablets: full-screen + ConstructXR sit in a row above the menu.
           Laptops and wider: they move into the bottom corners, level with the menu. */}
-      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-3 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-8 sm:pb-8 lg:grid lg:grid-cols-[1fr_minmax(0,48rem)_1fr] lg:items-center lg:gap-6">
+      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-3 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-8 sm:pb-8 lg:grid lg:grid-cols-[1fr_minmax(0,56rem)_1fr] lg:items-center lg:gap-6">
         <div className="flex min-h-12 items-center justify-between gap-3 px-1 lg:contents">
           <div className="lg:col-start-1 lg:row-start-1 lg:justify-self-start">
             {fullscreen.supported && (
@@ -172,8 +180,8 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner, intro = tr
           <ConstructXRBadge className="lg:col-start-3 lg:row-start-1 lg:justify-self-end" />
         </div>
       <nav aria-label="Explore" className="lg:col-start-2 lg:row-start-1">
-        <div className="mx-auto max-w-3xl animate-fade-up [animation-delay:300ms]" data-testid="landing-menu">
-          <ul className="grid grid-cols-4 gap-2 sm:gap-3" role="list">
+        <div className="mx-auto max-w-4xl animate-fade-up [animation-delay:300ms]" data-testid="landing-menu">
+          <ul className="grid grid-cols-5 gap-1.5 sm:gap-3" role="list">
             {actions.map(({ key, label, icon: Icon, available, onClick }) => (
               <li key={key}>
                 <button
@@ -184,7 +192,7 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner, intro = tr
                   className="group flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border border-gold-soft/50 bg-menu/92 px-1 py-2.5 text-center shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-menu hover:shadow-[0_14px_36px_rgba(0,0,0,0.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-soft disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 sm:gap-1.5 sm:rounded-full sm:px-3 sm:py-3.5"
                 >
                   <Icon className="size-6 text-gold-soft sm:size-7 transition duration-300 group-hover:text-ivory" strokeWidth={1.25} aria-hidden />
-                  <span className="text-[0.6rem] font-medium uppercase leading-tight tracking-[0.12em] text-ivory sm:text-[0.7rem] sm:tracking-[0.18em]">
+                  <span className="text-[0.56rem] font-medium uppercase leading-tight tracking-[0.06em] text-ivory sm:text-[0.7rem] sm:tracking-[0.16em]">
                     {label}
                   </span>
                   {!available && <span className="sr-only">(not available yet)</span>}
@@ -210,6 +218,16 @@ export function Landing({ snapshot, tourBase, tourQuery = "", banner, intro = tr
         doc={documents.brochure}
         testId="brochure-modal"
       />
+      <Dialog
+        open={modal === "renders"}
+        onClose={() => setModal(null)}
+        title={labels.renders ?? "Renders"}
+        hideHeader
+        className="h-[calc(100dvh-1.5rem)] w-[min(calc(100vw-1.5rem),1400px)]"
+        testId="renders-modal"
+      >
+        {documents.renders && <RendersGallery doc={documents.renders} title={labels.renders ?? "Renders"} onClose={() => setModal(null)} />}
+      </Dialog>
       <Dialog open={modal === "about"} onClose={() => setModal(null)} title={project.name || "About"} className="w-[min(92vw,560px)]">
         <div className="scroll-thin max-h-[70dvh] overflow-y-auto px-6 py-5">
           {project.aboutText && <p className="whitespace-pre-line leading-relaxed text-charcoal/85">{project.aboutText}</p>}

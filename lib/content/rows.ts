@@ -21,6 +21,11 @@ export interface AssetRow {
 export type AssetCategory = "panorama" | "image" | "floor_plan_image" | "pdf" | "audio" | "video";
 export const ASSET_CATEGORIES: AssetCategory[] = ["panorama", "image", "floor_plan_image", "pdf", "audio", "video"];
 
+/** Landing documents: each opens from a button in the bottom menu. */
+export type DocumentType = "floor_plan" | "brochure" | "renders";
+export const DOCUMENT_TYPES: DocumentType[] = ["floor_plan", "brochure", "renders"];
+export const DOCUMENT_TITLES: Record<DocumentType, string> = { floor_plan: "Floor Plan", brochure: "Brochure", renders: "Renders" };
+
 export interface AssetMetadata {
   variants?: Partial<Record<"thumb" | "md" | "lg" | "full", { key: string; width: number; height: number }>>;
   pageCount?: number;
